@@ -145,3 +145,65 @@ export interface ItemVenta {
   producto: number;
   cantidad: number;
 }
+
+export interface Stock {
+  id: number;
+  tienda: number;
+  producto: number;
+  cantidad: number;
+  reservado: number;
+  stock_minimo: number;
+  fecha_vencimiento: string | null;
+  producto_nombre: string;
+  tienda_codigo: string;
+}
+
+export type TipoMovimiento = "reserva" | "liberacion" | "venta" | "ingreso" | "merma";
+
+export interface MovimientoStock {
+  id: number;
+  tienda: number;
+  producto: number;
+  tipo: TipoMovimiento;
+  tipo_display: string;
+  cantidad: number;
+  motivo: string;
+  referencia: string;
+  usuario: number | null;
+  usuario_nombre: string | null;
+  fecha: string;
+  producto_nombre: string;
+  tienda_codigo: string;
+}
+
+export interface AlertaStock {
+  producto: number;
+  producto_nombre: string;
+  cantidad: number;
+  stock_minimo?: number;
+  fecha_vencimiento?: string;
+  dias_para_vencer?: number;
+}
+
+export interface AlertasResponse {
+  bajo_stock: AlertaStock[];
+  por_vencer: AlertaStock[];
+  resumen: {
+    bajo_stock_count: number;
+    por_vencer_count: number;
+  };
+}
+
+export interface ItemIngreso {
+  producto: number;
+  cantidad: number;
+  fecha_vencimiento?: string;
+  motivo?: string;
+}
+
+export interface ItemMerma {
+  producto: number;
+  cantidad: number;
+  motivo: "vencido" | "dañado";
+  nota?: string;
+}

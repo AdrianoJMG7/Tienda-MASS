@@ -19,6 +19,7 @@ import InicioRol from "./paginas/InicioRol";
 import LayoutVendedor from "./paginas/vendedor/LayoutVendedor";
 import PedidosTienda from "./paginas/vendedor/PedidosTienda";
 import Caja from "./paginas/vendedor/Caja";
+import Inventario from "./paginas/vendedor/Inventario";
 import Ingresar from "./paginas/Ingresar";
 import Privacidad from "./paginas/Privacidad";
 import Registro from "./paginas/Registro";
@@ -154,6 +155,7 @@ export default function App() {
             <Route index element={<InicioRol rol="vendedor" />} />
             <Route path="pedidos" element={<PedidosTienda />} />
             <Route path="caja" element={<Caja />} />
+            <Route path="inventario" element={<Inventario />} />
           </Route>
           <Route
             path="/cliente"

@@ -8,12 +8,16 @@ class Stock(models.Model):
 
     cantidad: unidades disponibles para vender, en la web o en caja.
     reservado: unidades apartadas por pedidos online que aún no se recogen (HU09).
+    stock_minimo: umbral para alertas de stock bajo (HU14).
+    fecha_vencimiento: fecha de vencimiento del lote actual (HU14).
     """
 
     tienda = models.ForeignKey("tienda.Tienda", on_delete=models.CASCADE, related_name="stock")
     producto = models.ForeignKey("producto.Producto", on_delete=models.CASCADE, related_name="stocks")
     cantidad = models.PositiveIntegerField(default=0)
     reservado = models.PositiveIntegerField(default=0)
+    stock_minimo = models.PositiveIntegerField(default=0, help_text="Umbral para alertas de stock bajo")
+    fecha_vencimiento = models.DateField(null=True, blank=True, help_text="Fecha de vencimiento del lote")
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["tienda", "producto"], name="stock_unico_por_tienda")]

@@ -134,3 +134,16 @@ export function conFiltros(ruta: string, filtros: Record<string, string | number
   const texto = params.toString();
   return texto ? `${ruta}?${texto}` : ruta;
 }
+
+// Funciones específicas para inventario (HU14, HU15)
+export const getInventario = (filtros?: Record<string, string | number | boolean | undefined>) =>
+  api<any[]>(conFiltros("/inventario/inventario/", filtros || {}));
+
+export const getAlertas = () => api<any>("/inventario/inventario/alertas/");
+
+export const getMovimientos = (filtros?: Record<string, string | number | boolean | undefined>) =>
+  api<any[]>(conFiltros("/inventario/movimientos/", filtros || {}));
+
+export const registrarIngreso = (items: unknown[]) => post<any>("/inventario/inventario/ingreso/", items);
+
+export const registrarMerma = (items: unknown[]) => post<any>("/inventario/inventario/merma/", items);
