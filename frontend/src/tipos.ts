@@ -64,17 +64,31 @@ export interface DetallePedido {
   subtotal: number;
 }
 
+export type EstadoPedido = "recibido" | "en_preparacion" | "listo" | "entregado" | "cancelado";
+
 export interface Pedido {
   id: number;
-  codigo_recojo: string;
-  estado: string;
+  /** Solo lo recibe el cliente dueño del pedido; el vendedor lo valida al entregar sin verlo. */
+  codigo_recojo?: string;
+  estado: EstadoPedido;
   estado_display: string;
+  cliente_nombre: string;
+  cliente_celular: string;
   tienda: Tienda;
   medio_pago: MedioPago;
   medio_pago_display: string;
+  /** Medio con el que realmente pagó al recoger (solo pedidos entregados). */
+  pagado_con: string | null;
   total: number;
   creado: string;
   vence_en: string;
+  preparado_en: string | null;
+  listo_en: string | null;
+  entregado_en: string | null;
+  cancelado_en: string | null;
+  cancelado_por: "" | "cliente" | "vendedor" | "sistema";
+  cancelado_por_display: string;
+  motivo_cancelacion: string;
   detalles: DetallePedido[];
 }
 

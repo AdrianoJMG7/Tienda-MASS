@@ -15,6 +15,8 @@ import Productos from "./paginas/admin/Productos";
 import Tiendas from "./paginas/admin/Tiendas";
 import Vendedores from "./paginas/admin/Vendedores";
 import InicioRol from "./paginas/InicioRol";
+import LayoutVendedor from "./paginas/vendedor/LayoutVendedor";
+import PedidosTienda from "./paginas/vendedor/PedidosTienda";
 import Ingresar from "./paginas/Ingresar";
 import Privacidad from "./paginas/Privacidad";
 import Registro from "./paginas/Registro";
@@ -138,17 +140,25 @@ export default function App() {
             <Route path="ofertas" element={<Ofertas />} />
             <Route path="categorias" element={<Categorias />} />
           </Route>
-          {(["vendedor", "cliente"] as const).map((rol) => (
-            <Route
-              key={rol}
-              path={RUTA_INICIO[rol]}
-              element={
-                <SoloRol rol={rol}>
-                  <InicioRol rol={rol} />
-                </SoloRol>
-              }
-            />
-          ))}
+          <Route
+            path="/vendedor"
+            element={
+              <SoloRol rol="vendedor">
+                <LayoutVendedor />
+              </SoloRol>
+            }
+          >
+            <Route index element={<InicioRol rol="vendedor" />} />
+            <Route path="pedidos" element={<PedidosTienda />} />
+          </Route>
+          <Route
+            path="/cliente"
+            element={
+              <SoloRol rol="cliente">
+                <InicioRol rol="cliente" />
+              </SoloRol>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

@@ -1218,3 +1218,136 @@ fieldset.selector-tienda legend,
     grid-template-columns: 1fr 360px;
   }
 }
+
+/* ---------- Atención de pedidos (vendedor) ---------- */
+
+.lista-pedidos {
+  display: grid;
+  gap: 12px;
+}
+
+.tarjeta-pedido {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tarjeta-pedido p {
+  margin: 0;
+}
+
+.pedido-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pedido-cabecera h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.pedido-cliente {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+
+.pedido-items {
+  margin: 0;
+  padding: 8px 0;
+  list-style: none;
+  border-top: 1px solid var(--borde);
+  border-bottom: 1px solid var(--borde);
+}
+
+.pedido-items li {
+  padding: 2px 0;
+}
+
+.pedido-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pedido-total strong {
+  font-size: 1.15rem;
+}
+
+.pedido-vence {
+  font-size: 0.9rem;
+  color: var(--texto-suave);
+}
+
+.pedido-vence.pronto {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.pedido-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 4px;
+}
+
+.pestanas button .contador {
+  margin-left: 6px;
+}
+
+.pestanas button[aria-pressed="true"] .contador {
+  background: #fff;
+  color: var(--azul);
+}
+
+.boton.peligro {
+  background: var(--error);
+}
+
+.boton.peligro:hover:not(:disabled) {
+  background: #8f1c13;
+}
+
+.entrada-codigo {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 1.5rem !important;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.insignia.recibido {
+  background: var(--amarillo-claro);
+  color: #7a5b00;
+}
+
+.insignia.en_preparacion {
+  background: var(--azul-claro);
+  color: var(--azul-oscuro);
+}
+
+.insignia.listo,
+.insignia.entregado {
+  background: #e3f4e7;
+  color: var(--exito);
+}
+
+.insignia.cancelado {
+  background: var(--error-fondo);
+  color: var(--error);
+}
+
+@media (min-width: 768px) {
+  .lista-pedidos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .lista-pedidos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

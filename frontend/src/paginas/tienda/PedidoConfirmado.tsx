@@ -14,17 +14,21 @@ export default function PedidoConfirmado() {
 
   if (error) return <p className="alerta" role="alert">{error}</p>;
   if (!pedido) return <p className="estado">Cargando tu pedido…</p>;
+  const codigo = pedido.codigo_recojo ?? "";
 
   return (
     <section className="pedido-confirmado">
       <div className="tarjeta codigo-recojo">
-        <h1>{nuevo ? "¡Pedido confirmado!" : `Pedido ${pedido.codigo_recojo}`}</h1>
+        <h1>{nuevo ? "¡Pedido confirmado!" : `Pedido ${codigo}`}</h1>
         <p>Tu código de recojo es</p>
-        <p className="codigo" aria-label={`Código ${pedido.codigo_recojo.split("").join(" ")}`}>
-          {pedido.codigo_recojo}
+        <p className="codigo" aria-label={`Código ${codigo.split("").join(" ")}`}>
+          {codigo}
         </p>
         <p className="dato-secundario">Muéstralo en caja cuando vayas a recoger.</p>
-        <span className="insignia programada">{pedido.estado_display}</span>
+        <span className={`insignia ${pedido.estado}`}>{pedido.estado_display}</span>
+        {pedido.estado === "cancelado" && pedido.motivo_cancelacion && (
+          <p className="dato-secundario">Motivo: {pedido.motivo_cancelacion}</p>
+        )}
         {nuevo && usuario && (
           <p className="dato-secundario">Te enviamos el resumen a {usuario.email}.</p>
         )}
