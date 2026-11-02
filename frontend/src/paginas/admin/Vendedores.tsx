@@ -78,7 +78,7 @@ function FormularioVendedor({ vendedor, tiendas, alGuardar }: PropsFormulario) {
 
 export default function Vendedores() {
   const [filtros, setFiltros] = useState({ tienda: "", q: "", page: 1 });
-  const { datos: tiendas } = useCarga<Tienda[]>("/tiendas/");
+  const { datos: tiendas } = useCarga<Tienda[]>("/tiendas/tiendas/");
   const q = useRetraso(filtros.q);
   const { datos, error, cargando, recargar } = useCarga<Paginado<Vendedor>>(
     conFiltros("/auth/usuarios/", { ...filtros, q }),

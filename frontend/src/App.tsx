@@ -10,6 +10,7 @@ import Confirmar from "./paginas/tienda/Confirmar";
 import PedidoConfirmado from "./paginas/tienda/PedidoConfirmado";
 import Categorias from "./paginas/admin/Categorias";
 import LayoutAdmin from "./paginas/admin/LayoutAdmin";
+import Ofertas from "./paginas/admin/Ofertas";
 import Productos from "./paginas/admin/Productos";
 import Tiendas from "./paginas/admin/Tiendas";
 import Vendedores from "./paginas/admin/Vendedores";
@@ -134,6 +135,7 @@ export default function App() {
             <Route path="tiendas" element={<Tiendas />} />
             <Route path="vendedores" element={<Vendedores />} />
             <Route path="productos" element={<Productos />} />
+            <Route path="ofertas" element={<Ofertas />} />
             <Route path="categorias" element={<Categorias />} />
           </Route>
           {(["vendedor", "cliente"] as const).map((rol) => (

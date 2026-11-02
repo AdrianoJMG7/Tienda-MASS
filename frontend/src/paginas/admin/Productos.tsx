@@ -22,8 +22,10 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
     marca: producto?.marca ?? "",
     codigo_barras: producto?.codigo_barras ?? "",
     categoria: producto ? String(producto.categoria) : "",
+    costo: producto?.costo != null ? String(producto.costo) : "",
     precio: producto ? String(producto.precio) : "",
   });
+  const [marcaPropia, setMarcaPropia] = useState(producto?.marca_propia ?? false);
   const [activo, setActivo] = useState(producto?.activo ?? true);
   const [foto, setFoto] = useState<File | null>(null);
   const [quitarFoto, setQuitarFoto] = useState(false);
@@ -31,13 +33,17 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
   const cambiar = (campo: keyof typeof datos) => (e: { target: { value: string } }) =>
     setDatos({ ...datos, [campo]: e.target.value });
 
+  const costo = Number(datos.costo);
   const precio = Number(datos.precio);
+  // Margen sobre el precio de venta: qué parte del precio queda después de cubrir el costo.
+  const margen = costo > 0 && precio > 0 ? ((precio - costo) / precio) * 100 : null;
   const cambiaPrecio = producto && datos.precio !== "" && precio !== producto.precio;
 
   async function guardar(evento: FormEvent) {
     evento.preventDefault();
     const formulario = new FormData();
     for (const [campo, valor] of Object.entries(datos)) formulario.append(campo, valor);
+    formulario.append("marca_propia", String(marcaPropia));
     formulario.append("activo", String(activo));
     if (foto) formulario.append("foto", foto);
     else if (quitarFoto) formulario.append("quitar_foto", "true");
@@ -68,6 +74,8 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
           ayuda="Entre 8 y 14 dígitos."
           required
         />
+        <div />
+        <Campo etiqueta="Costo (S/)" type="number" min="0" step="0.01" value={datos.costo} onChange={cambiar("costo")} error={errores.costo} required />
         <Campo
           etiqueta="Precio de venta (S/)"
           type="number"
@@ -76,6 +84,7 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
           value={datos.precio}
           onChange={cambiar("precio")}
           error={errores.precio}
+          ayuda={margen !== null ? `Margen: ${margen.toFixed(1)} %` : undefined}
           required
         />
       </div>
@@ -93,6 +102,7 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
       {producto?.foto && !foto && (
         <Casilla marcada={quitarFoto} alCambiar={setQuitarFoto}>Quitar la foto actual</Casilla>
       )}
+      <Casilla marcada={marcaPropia} alCambiar={setMarcaPropia}>Marca propia</Casilla>
       <Casilla marcada={activo} alCambiar={setActivo}>Activo (visible en el catálogo)</Casilla>
       <button className="boton ancho" disabled={enviando}>
         {enviando ? "Guardando…" : "Guardar producto"}
@@ -133,7 +143,7 @@ function HistorialPrecios({ producto }: { producto: Producto }) {
 export default function Productos() {
   const [filtros, setFiltros] = useState({ q: "", categoria: "", estado: "activos", marca_propia: false, en_oferta: false, page: 1 });
   const q = useRetraso(filtros.q);
-  const { datos: categorias } = useCarga<Categoria[]>("/categorias/");
+  const { datos: categorias } = useCarga<Categoria[]>("/categorias/categorias/");
   const { datos, error, cargando, recargar } = useCarga<Paginado<Producto>>(conFiltros("/productos/productos/", { ...filtros, q }));
   const [editando, setEditando] = useState<Producto | null | undefined>(undefined);
   const [historial, setHistorial] = useState<Producto | null>(null);

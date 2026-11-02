@@ -54,7 +54,7 @@ export default function Confirmar() {
     setSinStock([]);
     setEnviando(true);
     try {
-      const pedido = await post<Pedido>("/pedidos/", {
+      const pedido = await post<Pedido>("/pedidos/pedidos/", {
         tienda,
         medio_pago: medioPago,
         items: items.map((i) => ({ producto: i.producto, cantidad: i.cantidad })),

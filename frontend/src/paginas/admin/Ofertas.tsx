@@ -21,7 +21,7 @@ type ProductoElegido = Pick<Producto, "id" | "nombre" | "marca" | "precio" | "fo
 function BuscadorProducto({ alElegir }: { alElegir: (p: ProductoElegido) => void }) {
   const [texto, setTexto] = useState("");
   const q = useRetraso(texto.trim());
-  const { datos, cargando } = useCarga<Paginado<Producto>>(q.length >= 2 ? conFiltros("/productos/", { q, page_size: 6 }) : null);
+  const { datos, cargando } = useCarga<Paginado<Producto>>(q.length >= 2 ? conFiltros("/productos/productos/", { q, page_size: 6 }) : null);
   return (
     <div>
       <Campo etiqueta="Producto" type="search" placeholder="Escribe al menos 2 letras" value={texto} onChange={(e) => setTexto(e.target.value)} />
@@ -63,7 +63,7 @@ function FormularioOferta({ oferta, alGuardar }: { oferta: Oferta | null; alGuar
   async function guardar(evento: FormEvent) {
     evento.preventDefault();
     const cuerpo = { ...datos, producto: producto?.id ?? null };
-    const ok = await enviar(() => (oferta ? patch(`/ofertas/${oferta.id}/`, cuerpo) : post("/ofertas/", cuerpo)));
+    const ok = await enviar(() => (oferta ? patch(`/productos/ofertas/${oferta.id}/`, cuerpo) : post("/productos/ofertas/", cuerpo)));
     if (ok) alGuardar();
   }
 
@@ -112,14 +112,14 @@ function FormularioOferta({ oferta, alGuardar }: { oferta: Oferta | null; alGuar
 export default function Ofertas() {
   const [filtros, setFiltros] = useState({ estado: "vigente", q: "", page: 1 });
   const q = useRetraso(filtros.q);
-  const { datos, error, cargando, recargar } = useCarga<Paginado<Oferta>>(conFiltros("/ofertas/", { ...filtros, q }));
+  const { datos, error, cargando, recargar } = useCarga<Paginado<Oferta>>(conFiltros("/productos/ofertas/", { ...filtros, q }));
   const [editando, setEditando] = useState<Oferta | null | undefined>(undefined);
   const [aviso, setAviso] = useState("");
 
   async function borrar(o: Oferta) {
     if (!confirm(`¿Eliminar la oferta de ${o.producto_nombre}?`)) return;
     try {
-      await eliminar(`/ofertas/${o.id}/`);
+      await eliminar(`/productos/ofertas/${o.id}/`);
       setAviso("Oferta eliminada.");
       recargar();
     } catch {

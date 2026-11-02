@@ -127,9 +127,9 @@ export interface LineaCarrito extends ItemCarrito {
 export function useCarritoActualizado() {
   const { items, tienda } = useCarrito();
   const ids = items.map((i) => i.producto).sort((a, b) => a - b).join(",");
-  const { datos: tiendas } = useCarga<Tienda[]>("/tiendas/");
+  const { datos: tiendas } = useCarga<Tienda[]>("/tiendas/tiendas/");
   const consulta = useCarga<Paginado<Producto>>(
-    ids ? conFiltros("/productos/", { ids, tienda: tienda ?? undefined, page_size: 100 }) : null,
+    ids ? conFiltros("/productos/productos/", { ids, tienda: tienda ?? undefined, page_size: 100 }) : null,
   );
 
   const tiendaElegida = tiendas?.find((t) => t.id === tienda) ?? null;

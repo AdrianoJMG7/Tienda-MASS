@@ -33,10 +33,10 @@ export default function Catalogo() {
   // Solo se consulta la disponibilidad de una tienda activa.
   const tiendaActiva = tiendas?.some((t) => t.id === tienda) ? tienda! : undefined;
   const { datos, error, cargando } = useCarga<Paginado<Producto>>(
-    tiendas ? conFiltros("/productos/", { ...filtros, q, precio_min, precio_max, tienda: tiendaActiva, page_size: POR_PAGINA }) : null,
+    tiendas ? conFiltros("/productos/productos/", { ...filtros, q, precio_min, precio_max, tienda: tiendaActiva, page_size: POR_PAGINA }) : null,
   );
   const ofertas = useCarga<Paginado<Producto>>(
-    tiendas && !hayFiltros ? conFiltros("/productos/", { en_oferta: true, tienda: tiendaActiva, page_size: 12 }) : null,
+    tiendas && !hayFiltros ? conFiltros("/productos/productos/", { en_oferta: true, tienda: tiendaActiva, page_size: 12 }) : null,
   );
 
   function cambiarPagina(page: number) {

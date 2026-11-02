@@ -5,9 +5,9 @@ import { destinoTrasIngresar, useSesion } from "../auth";
 import Campo from "../componentes/Campo";
 
 const CUENTAS_DEMO = [
-  { rol: "Administradora", email: "admin@mass.test" },
-  { rol: "Vendedor (T-003)", email: "luis@mass.test" },
-  { rol: "Cliente", email: "rocio@correo.pe" },
+  { rol: "Administrador", email: "admin@mass.test", password: "Admin1234" },
+  { rol: "Vendedor (T-001)", email: "vendedor1@mass.test", password: "Vendedor1234" },
+  { rol: "Cliente", email: "cliente@mass.test", password: "Cliente1234" },
 ];
 
 export default function Ingresar() {
@@ -71,7 +71,7 @@ export default function Ingresar() {
         </Link>
       </p>
       <details className="demo">
-        <summary>Cuentas demo (contraseña Demo1234!)</summary>
+        <summary>Cuentas demo</summary>
         <ul>
           {CUENTAS_DEMO.map((c) => (
             <li key={c.email}>
@@ -80,7 +80,7 @@ export default function Ingresar() {
                 className="enlace"
                 onClick={() => {
                   setEmail(c.email);
-                  setPassword("Demo1234!");
+                  setPassword(c.password);
                 }}
               >
                 {c.rol}: {c.email}

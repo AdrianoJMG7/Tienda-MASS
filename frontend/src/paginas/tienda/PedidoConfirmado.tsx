@@ -10,7 +10,7 @@ export default function PedidoConfirmado() {
   const { id } = useParams();
   const { usuario } = useSesion();
   const nuevo = (useLocation().state as { nuevo?: boolean } | null)?.nuevo;
-  const { datos: pedido, error } = useCarga<Pedido>(`/pedidos/${id}/`);
+  const { datos: pedido, error } = useCarga<Pedido>(`/pedidos/pedidos/${id}/`);
 
   if (error) return <p className="alerta" role="alert">{error}</p>;
   if (!pedido) return <p className="estado">Cargando tu pedido…</p>;
