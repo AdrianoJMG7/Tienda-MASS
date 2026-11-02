@@ -68,8 +68,6 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
           ayuda="Entre 8 y 14 dígitos."
           required
         />
-        <div />
-        <Campo etiqueta="Costo (S/)" type="number" min="0" step="0.01" value={datos.costo} onChange={cambiar("costo")} error={errores.costo} required />
         <Campo
           etiqueta="Precio de venta (S/)"
           type="number"
@@ -78,7 +76,6 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
           value={datos.precio}
           onChange={cambiar("precio")}
           error={errores.precio}
-          ayuda={margen !== null ? `Margen: ${margen.toFixed(1)} %` : undefined}
           required
         />
       </div>
@@ -96,7 +93,6 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
       {producto?.foto && !foto && (
         <Casilla marcada={quitarFoto} alCambiar={setQuitarFoto}>Quitar la foto actual</Casilla>
       )}
-      <Casilla marcada={marcaPropia} alCambiar={setMarcaPropia}>Marca propia</Casilla>
       <Casilla marcada={activo} alCambiar={setActivo}>Activo (visible en el catálogo)</Casilla>
       <button className="boton ancho" disabled={enviando}>
         {enviando ? "Guardando…" : "Guardar producto"}
