@@ -153,8 +153,7 @@ export default function App() {
         </Routes>
       </main>
       <footer className="pie">
-        Prototipo académico con datos simulados, presentado como propuesta a Tiendas Mass (InRetail). No es el sitio
-        oficial de Mass.
+        © 2026 Tiendas Mass - InRetail Perú. Todos los derechos reservados.
       </footer>
     </>
   );
