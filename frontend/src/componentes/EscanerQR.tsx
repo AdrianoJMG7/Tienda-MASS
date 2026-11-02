@@ -15,7 +15,7 @@ export default function EscanerQR({ abierto, alCerrar, alEscanear }: Props) {
   const [tieneCamara, setTieneCamara] = useState(true);
   const [tiempoRestante, setTiempoRestante] = useState(TIMEOUT_SEGUNDOS);
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scanningRef = useRef(false);
