@@ -77,6 +77,7 @@ class InicioView(APIView):
                 {"clave": "productos", "titulo": "Catálogo y precios", "hu": "HU05", "disponible": True, "ruta": "/admin/productos"},
                 {"clave": "ofertas", "titulo": "Ofertas", "hu": "HU05", "disponible": True, "ruta": "/admin/ofertas"},
                 {"clave": "categorias", "titulo": "Categorías", "hu": "HU05", "disponible": True, "ruta": "/admin/categorias"},
+                {"clave": "reportes", "titulo": "Reportes", "hu": "HU16", "disponible": True, "ruta": "/admin/reportes"},
             ]
         elif rol == "vendedor":
             menu = [
