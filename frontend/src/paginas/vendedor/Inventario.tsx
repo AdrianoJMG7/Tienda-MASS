@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { conFiltros, getAlertas, getInventario, registrarIngreso, registrarMerma } from "../../api";
+import { conFiltros, registrarIngreso, registrarMerma } from "../../api";
 import Campo from "../../componentes/Campo";
 import Dialogo from "../../componentes/Dialogo";
 import Seleccion from "../../componentes/Seleccion";

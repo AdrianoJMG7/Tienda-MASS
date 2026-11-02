@@ -16,7 +16,6 @@ export default function Caja() {
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
   const [ventaReciente, setVentaReciente] = useState<any>(null);
   const [escanerAbierto, setEscanerAbierto] = useState(false);
-  const [codigoEscaneado, setCodigoEscaneado] = useState<string | null>(null);
   const teclasRef = useRef<string[]>([]);
   const tiempoTeclasRef = useRef<number>(0);
 
