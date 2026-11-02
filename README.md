@@ -25,7 +25,9 @@ Equipo: Oder, Adriano y Daniel. Ingeniería de Sistemas, Lima 2026.
 | HU13 | Escanear código de barras: escanear QR con cámara o código de barras con escáner USB para agregar productos a la venta sin buscar | Hecho |
 | HU14 | Consultar stock y alertas: stock disponible y reservado, alertas de stock bajo y vencimiento en 7 días | Hecho |
 | HU15 | Registrar ingresos y mermas: ingreso con cantidad y vencimiento, merma con motivo (vencido/dañado), historial de movimientos | Hecho |
-| HU16 a HU20 | Sprints 4 y 5 (reportes, diseño responsivo y demo) | Pendiente |
+| HU16 | Panel de ventas y pedidos: ventas por tienda y canal con ticket promedio, pedidos por estado, tiempo de preparación y productos más vendidos, filtrable por periodo y tienda | Hecho |
+| HU17 | Exportar reportes a Excel o PDF respetando los filtros del panel | Hecho |
+| HU18 a HU20 | Sprints 4 y 5 (simulación y usabilidad, diseño responsivo y demo) | Pendiente |
 
 ## Tecnologías
 
@@ -44,7 +46,8 @@ MASS/
 │   ├── catalogo/    categorías, productos, ofertas, historial de precios y cargar_catalogo (HU05, HU06)
 │   ├── inventario/  stock por tienda y cargar_stock (HU09, HU12)
 │   ├── pedidos/     pedidos para recoger, código de recojo, correo (HU08) y gestión (HU10, HU11)
-│   └── venta/       ventas en caja con descuento de stock (HU12)
+│   ├── venta/       ventas en caja con descuento de stock (HU12)
+│   └── reporte/     panel de ventas y pedidos, exportación y simular_ventas (HU16, HU17)
 └── frontend/
     └── src/
         ├── api.ts         cliente HTTP con JWT y renovación del token
@@ -52,7 +55,7 @@ MASS/
         ├── carrito.tsx    carrito guardado en el navegador (HU07)
         ├── componentes/   logo, campos, diálogo, paginación
         └── paginas/       Ingresar, Registro, Privacidad, InicioRol
-            ├── admin/     Tiendas, Vendedores, Productos, Ofertas, Categorías
+            ├── admin/     Tiendas, Vendedores, Productos, Ofertas, Categorías, Reportes
             ├── tienda/    Catálogo, Carrito, Confirmar, PedidoConfirmado, MisPedidos
             └── vendedor/  PedidosTienda, Caja
 ```
@@ -69,6 +72,7 @@ python -m venv .venv
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py cargar_demo     # 5 tiendas, cuentas demo, 800 productos y su stock
+python manage.py simular_ventas  # 30 días de ventas y pedidos para los reportes (opcional: --dias 90)
 python manage.py runserver
 ```
 

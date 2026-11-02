@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router";
 import type { Rol } from "./api";
 import { RUTA_INICIO, useSesion } from "./auth";
@@ -23,6 +23,9 @@ import Inventario from "./paginas/vendedor/Inventario";
 import Ingresar from "./paginas/Ingresar";
 import Privacidad from "./paginas/Privacidad";
 import Registro from "./paginas/Registro";
+
+// Los gráficos (Recharts) pesan; se descargan solo cuando el administrador abre los reportes.
+const Reportes = lazy(() => import("./paginas/admin/Reportes"));
 
 const NOMBRE_ROL: Record<Rol, string> = { admin: "Administrador", vendedor: "Vendedor", cliente: "Cliente" };
 
@@ -143,6 +146,14 @@ export default function App() {
             <Route path="productos" element={<Productos />} />
             <Route path="ofertas" element={<Ofertas />} />
             <Route path="categorias" element={<Categorias />} />
+            <Route
+              path="reportes"
+              element={
+                <Suspense fallback={<p className="estado">Cargando reportes…</p>}>
+                  <Reportes />
+                </Suspense>
+              }
+            />
           </Route>
           <Route
             path="/vendedor"

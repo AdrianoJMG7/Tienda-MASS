@@ -207,3 +207,33 @@ export interface ItemMerma {
   motivo: "vencido" | "dañado";
   nota?: string;
 }
+
+/** HU16: panel de ventas y pedidos. Montos en soles. */
+export interface PanelReportes {
+  filtros: { desde: string; hasta: string; tienda: number | null; descripcion: string };
+  resumen: {
+    ventas: number;
+    total: number;
+    ticket_promedio: number;
+    pedidos: number;
+    pedidos_entregados: number;
+    pedidos_cancelados: number;
+    minutos_preparacion: number | null;
+  };
+  por_canal: { canal: "caja" | "web"; canal_display: string; ventas: number; total: number; ticket_promedio: number }[];
+  por_tienda: {
+    tienda: number;
+    codigo: string;
+    nombre: string;
+    ventas: number;
+    total: number;
+    caja: number;
+    web: number;
+    ticket_promedio: number;
+    pedidos: number;
+    minutos_preparacion: number | null;
+  }[];
+  por_dia: { fecha: string; caja: number; web: number }[];
+  por_estado: { estado: EstadoPedido; estado_display: string; pedidos: number }[];
+  top_productos: { producto: number; nombre: string; marca: string; unidades: number; total: number }[];
+}
