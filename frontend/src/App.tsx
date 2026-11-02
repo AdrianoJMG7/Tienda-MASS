@@ -8,6 +8,7 @@ import Carrito from "./paginas/tienda/Carrito";
 import Catalogo from "./paginas/tienda/Catalogo";
 import Confirmar from "./paginas/tienda/Confirmar";
 import PedidoConfirmado from "./paginas/tienda/PedidoConfirmado";
+import MisPedidos from "./paginas/tienda/MisPedidos";
 import Categorias from "./paginas/admin/Categorias";
 import LayoutAdmin from "./paginas/admin/LayoutAdmin";
 import Ofertas from "./paginas/admin/Ofertas";
@@ -17,6 +18,7 @@ import Vendedores from "./paginas/admin/Vendedores";
 import InicioRol from "./paginas/InicioRol";
 import LayoutVendedor from "./paginas/vendedor/LayoutVendedor";
 import PedidosTienda from "./paginas/vendedor/PedidosTienda";
+import Caja from "./paginas/vendedor/Caja";
 import Ingresar from "./paginas/Ingresar";
 import Privacidad from "./paginas/Privacidad";
 import Registro from "./paginas/Registro";
@@ -60,6 +62,7 @@ function Cabecera() {
       {compra && (
         <nav className="menu-tienda" aria-label="Tienda">
           <NavLink to="/catalogo">Catálogo</NavLink>
+          {usuario && <NavLink to="/cliente/pedidos">Mis pedidos</NavLink>}
           {usuario && <NavLink to="/cliente">Mi cuenta</NavLink>}
           <NavLink to="/carrito" className="enlace-carrito">
             Carrito
@@ -150,12 +153,21 @@ export default function App() {
           >
             <Route index element={<InicioRol rol="vendedor" />} />
             <Route path="pedidos" element={<PedidosTienda />} />
+            <Route path="caja" element={<Caja />} />
           </Route>
           <Route
             path="/cliente"
             element={
               <SoloRol rol="cliente">
                 <InicioRol rol="cliente" />
+              </SoloRol>
+            }
+          />
+          <Route
+            path="/cliente/pedidos"
+            element={
+              <SoloRol rol="cliente">
+                <MisPedidos />
               </SoloRol>
             }
           />

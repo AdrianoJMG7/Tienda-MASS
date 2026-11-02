@@ -32,8 +32,10 @@ class PedidoViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.L
     def get_permissions(self):
         if self.action == "create":
             return [EsCliente()]
-        if self.action in ("preparar", "listo", "entregar", "cancelar", "conteos"):
+        if self.action in ("preparar", "listo", "entregar", "conteos"):
             return [EsVendedor()]
+        if self.action == "cancelar":
+            return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
     def get_queryset(self):
@@ -94,12 +96,16 @@ class PedidoViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.L
     @extend_schema(request=CancelarSerializer, responses={200: PedidoSerializer})
     @action(detail=True, methods=["post"])
     def cancelar(self, request, pk=None):
-        """HU10: cancelar indicando el motivo; libera el stock reservado (HU09)."""
+        """HU10 y HU11: cancelar indicando el motivo; libera el stock reservado (HU09).
+        El vendedor puede cancelar cualquier pedido de su tienda; el cliente solo los suyos."""
         entrada = CancelarSerializer(data=request.data)
         entrada.is_valid(raise_exception=True)
-        pedido = servicios.cancelar(
-            self.get_object(), CanceladoPor.VENDEDOR, entrada.validated_data["motivo"], usuario=request.user
-        )
+        pedido = self.get_object()
+        # El cliente solo puede cancelar sus propios pedidos
+        if request.user.rol == Rol.CLIENTE and pedido.cliente != request.user:
+            return Response({"detail": "Solo puedes cancelar tus propios pedidos."}, status=status.HTTP_403_FORBIDDEN)
+        por = CanceladoPor.VENDEDOR if request.user.rol == Rol.VENDEDOR else CanceladoPor.CLIENTE
+        pedido = servicios.cancelar(pedido, por, entrada.validated_data["motivo"], usuario=request.user)
         return self._responder(pedido)
 
     @action(detail=False)

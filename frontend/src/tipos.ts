@@ -113,3 +113,35 @@ export interface CambioPrecio {
   usuario_nombre: string | null;
   fecha: string;
 }
+
+export type CanalVenta = "caja" | "web";
+
+export interface DetalleVenta {
+  id: number;
+  producto: number;
+  producto_nombre: string;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+}
+
+export interface Venta {
+  id: number;
+  tienda: number;
+  tienda_codigo: string;
+  vendedor: number;
+  vendedor_nombre: string;
+  fecha: string;
+  total: number;
+  medio_pago: MedioPago;
+  numero_ticket: string | null;
+  canal: CanalVenta;
+  pedido: number | null;
+  detalles: DetalleVenta[];
+  vuelto: number | null;
+}
+
+export interface ItemVenta {
+  producto: number;
+  cantidad: number;
+}

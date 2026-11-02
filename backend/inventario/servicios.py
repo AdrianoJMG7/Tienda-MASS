@@ -85,3 +85,34 @@ def entregar_reserva(tienda, items, usuario=None, referencia=""):
     """Pedido entregado: lo reservado sale de la tienda como venta."""
     _desde_reservado(tienda, items, devolver=False)
     _registrar(tienda, items, Tipo.VENTA, usuario, referencia)
+
+
+@transaction.atomic
+def descontar(tienda, items, usuario=None, referencia=""):
+    """HU12: venta en caja: descuenta stock directamente sin reserva previa."""
+    sin_stock = []
+    for producto, cantidad in items:
+        filas = Stock.objects.filter(tienda=tienda, producto=producto, cantidad__gte=cantidad).update(
+            cantidad=F("cantidad") - cantidad
+        )
+        if filas == 0:
+            disponible = Stock.objects.filter(tienda=tienda, producto=producto).values_list("cantidad", flat=True).first()
+            sin_stock.append(
+                {"producto": producto.id, "nombre": producto.nombre, "disponible": disponible or 0, "solicitado": cantidad}
+            )
+    if sin_stock:
+        raise StockInsuficiente(f"No hay stock suficiente en {tienda.nombre} para algunos productos.", sin_stock)
+    _registrar(tienda, items, Tipo.VENTA, usuario, referencia)
+
+
+def verificar_stock(tienda, items):
+    """Verifica si hay stock suficiente sin modificarlo (para validación previa)."""
+    sin_stock = []
+    for producto, cantidad in items:
+        stock = Stock.objects.filter(tienda=tienda, producto=producto).values_list("cantidad", flat=True).first()
+        if stock is None or stock < cantidad:
+            sin_stock.append(
+                {"producto": producto.id, "nombre": producto.nombre, "disponible": stock or 0, "solicitado": cantidad}
+            )
+    if sin_stock:
+        raise StockInsuficiente(f"No hay stock suficiente en {tienda.nombre} para algunos productos.", sin_stock)

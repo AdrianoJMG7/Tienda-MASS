@@ -18,7 +18,11 @@ Equipo: Oder, Adriano y Daniel. Ingeniería de Sistemas, Lima 2026.
 | HU06 | Catálogo público sin iniciar sesión: búsqueda, filtros, ofertas de la semana y disponibilidad en la tienda elegida | Hecho |
 | HU07 | Carrito que se conserva al cerrar la página, tienda de recojo con dirección y horario, aviso de stock insuficiente | Hecho |
 | HU08 | Confirmar pedido (solo clientes): código de recojo de 6 caracteres, medio de pago al recoger y correo con el resumen | Hecho |
-| HU09 a HU20 | Sprints 2 a 5 (la reserva de stock al confirmar es la HU09) | Pendiente |
+| HU09 | Reservar stock del pedido al confirmar; liberar si se cancela o vence (48 horas) | Hecho |
+| HU10 | Gestionar pedidos de la tienda: lista por estado, preparar, marcar listo, entregar y cancelar | Hecho |
+| HU11 | Consultar estado e historial de pedidos del cliente; cancelar pedidos pendientes | Hecho |
+| HU12 | Registrar venta en caja: agregar productos, calcular total, medios de pago con vuelto | Hecho |
+| HU13 a HU20 | Sprints 4 y 5 (escáner de códigos, inventario, reportes, diseño responsivo y demo) | Pendiente |
 
 ## Tecnologías
 
@@ -35,8 +39,9 @@ MASS/
 │   ├── cuentas/     usuario, registro, login, logout (HU02, HU03) y vendedores (HU04)
 │   ├── tiendas/     tiendas (HU04)
 │   ├── catalogo/    categorías, productos, ofertas, historial de precios y cargar_catalogo (HU05, HU06)
-│   ├── inventario/  stock por tienda y cargar_stock
-│   └── pedidos/     pedidos para recoger, código de recojo y correo de confirmación (HU08)
+│   ├── inventario/  stock por tienda y cargar_stock (HU09, HU12)
+│   ├── pedidos/     pedidos para recoger, código de recojo, correo (HU08) y gestión (HU10, HU11)
+│   └── venta/       ventas en caja con descuento de stock (HU12)
 └── frontend/
     └── src/
         ├── api.ts         cliente HTTP con JWT y renovación del token
@@ -45,7 +50,8 @@ MASS/
         ├── componentes/   logo, campos, diálogo, paginación
         └── paginas/       Ingresar, Registro, Privacidad, InicioRol
             ├── admin/     Tiendas, Vendedores, Productos, Ofertas, Categorías
-            └── tienda/    Catálogo, Carrito, Confirmar, PedidoConfirmado
+            ├── tienda/    Catálogo, Carrito, Confirmar, PedidoConfirmado, MisPedidos
+            └── vendedor/  PedidosTienda, Caja
 ```
 
 ## Cómo ejecutarlo
@@ -105,6 +111,9 @@ La documentación interactiva está en http://localhost:8000/api/docs/ (Swagger/
 | CRUD | `/api/ofertas/` | Administrador | Ofertas; filtro `estado` = vigente, programada o vencida |
 | POST | `/api/pedidos/` | Cliente | Confirmar pedido `{tienda, medio_pago, items: [{producto, cantidad}]}`; 409 si falta stock |
 | GET | `/api/pedidos/`, `/api/pedidos/{id}/` | Con sesión | El cliente ve los suyos; el vendedor, los de su tienda; el administrador, todos |
+| POST | `/api/pedidos/{id}/cancelar/` | Cliente/Vendedor | Cancelar pedido con motivo; libera el stock reservado |
+| POST | `/api/ventas/crear/` | Vendedor | Registrar venta en caja `{medio_pago, monto_recibido, items: [{producto, cantidad}]}`; descuenta stock |
+| GET | `/api/ventas/` | Vendedor/Admin | Ventas de la tienda (vendedor) o todas (admin) |
 
 ## Pruebas
 

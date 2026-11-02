@@ -1277,6 +1277,119 @@ fieldset.selector-tienda legend,
   font-size: 1.15rem;
 }
 
+/* ---------- Mis pedidos (cliente) ---------- */
+
+.tarjeta-pedido h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.fecha {
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+.estado {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.estado-recibido,
+.estado-en_preparacion {
+  background: var(--azul-claro);
+  color: var(--azul-oscuro);
+}
+
+.estado-listo {
+  background: #e3f4e7;
+  color: var(--exito);
+}
+
+.estado-entregado {
+  background: #eceef3;
+  color: var(--texto-suave);
+}
+
+.estado-cancelado {
+  background: var(--error-fondo);
+  color: var(--error);
+}
+
+.pedido-tienda {
+  padding: 8px 0;
+  border-top: 1px solid var(--borde);
+  border-bottom: 1px solid var(--borde);
+}
+
+.pedido-detalles {
+  padding: 8px 0;
+}
+
+.pedido-detalles ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.pedido-detalles li {
+  padding: 2px 0;
+}
+
+.pedido-total {
+  padding: 8px 0;
+  border-top: 1px solid var(--borde);
+}
+
+.pedido-codigo {
+  padding: 8px 0;
+  text-align: center;
+  background: var(--amarillo-claro);
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.pedido-codigo code {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: var(--azul);
+}
+
+.motivo-cancelacion {
+  padding: 8px;
+  margin-top: 8px;
+  background: var(--error-fondo);
+  border-radius: 8px;
+  color: var(--error);
+  font-size: 0.9rem;
+}
+
+.boton.peligro {
+  background: var(--error);
+}
+
+.boton.peligro:hover:not(:disabled) {
+  background: #8a1a10;
+}
+
+.acciones-dialogo {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.exito {
+  padding: 10px 12px;
+  border-left: 4px solid var(--exito);
+  border-radius: 6px;
+  background: #e3f4e7;
+  color: var(--exito);
+}
+
 .pedido-vence {
   font-size: 0.9rem;
   color: var(--texto-suave);
