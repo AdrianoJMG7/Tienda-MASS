@@ -22,10 +22,8 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
     marca: producto?.marca ?? "",
     codigo_barras: producto?.codigo_barras ?? "",
     categoria: producto ? String(producto.categoria) : "",
-    costo: producto?.costo != null ? String(producto.costo) : "",
     precio: producto ? String(producto.precio) : "",
   });
-  const [marcaPropia, setMarcaPropia] = useState(producto?.marca_propia ?? false);
   const [activo, setActivo] = useState(producto?.activo ?? true);
   const [foto, setFoto] = useState<File | null>(null);
   const [quitarFoto, setQuitarFoto] = useState(false);
@@ -33,21 +31,18 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
   const cambiar = (campo: keyof typeof datos) => (e: { target: { value: string } }) =>
     setDatos({ ...datos, [campo]: e.target.value });
 
-  const costo = Number(datos.costo);
   const precio = Number(datos.precio);
-  const margen = costo > 0 && precio > 0 ? ((precio - costo) / precio) * 100 : null;
   const cambiaPrecio = producto && datos.precio !== "" && precio !== producto.precio;
 
   async function guardar(evento: FormEvent) {
     evento.preventDefault();
     const formulario = new FormData();
     for (const [campo, valor] of Object.entries(datos)) formulario.append(campo, valor);
-    formulario.append("marca_propia", String(marcaPropia));
     formulario.append("activo", String(activo));
     if (foto) formulario.append("foto", foto);
     else if (quitarFoto) formulario.append("quitar_foto", "true");
     const ok = await enviar(() =>
-      producto ? patch(`/productos/${producto.id}/`, formulario) : post("/productos/", formulario),
+      producto ? patch(`/productos/productos/${producto.id}/`, formulario) : post("/productos/productos/", formulario),
     );
     if (ok) alGuardar();
   }
@@ -111,7 +106,7 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
 }
 
 function HistorialPrecios({ producto }: { producto: Producto }) {
-  const { datos, error, cargando } = useCarga<CambioPrecio[]>(`/productos/${producto.id}/historial/`);
+  const { datos, error, cargando } = useCarga<CambioPrecio[]>(`/productos/productos/${producto.id}/historial/`);
   if (error) return <p className="alerta" role="alert">{error}</p>;
   if (cargando) return <p className="estado">Cargando…</p>;
   if (!datos?.length) return <p className="estado">El precio de este producto no ha cambiado.</p>;
@@ -143,7 +138,7 @@ export default function Productos() {
   const [filtros, setFiltros] = useState({ q: "", categoria: "", estado: "activos", marca_propia: false, en_oferta: false, page: 1 });
   const q = useRetraso(filtros.q);
   const { datos: categorias } = useCarga<Categoria[]>("/categorias/");
-  const { datos, error, cargando, recargar } = useCarga<Paginado<Producto>>(conFiltros("/productos/", { ...filtros, q }));
+  const { datos, error, cargando, recargar } = useCarga<Paginado<Producto>>(conFiltros("/productos/productos/", { ...filtros, q }));
   const [editando, setEditando] = useState<Producto | null | undefined>(undefined);
   const [historial, setHistorial] = useState<Producto | null>(null);
   const [aviso, setAviso] = useState("");

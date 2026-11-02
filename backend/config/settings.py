@@ -28,12 +28,13 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "drf_spectacular",
-    "core",
-    "tiendas",
-    "cuentas",
-    "catalogo",
+    "usuarios",
+    "tienda",
+    "categoria",
+    "producto",
     "inventario",
-    "pedidos",
+    "pedido",
+    "venta",
 ]
 
 MIDDLEWARE = [
@@ -75,7 +76,7 @@ DATABASES = {
     )
 }
 
-AUTH_USER_MODEL = "cuentas.Usuario"
+AUTH_USER_MODEL = "usuarios.Usuario"
 
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
@@ -103,7 +104,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework_simplejwt.authentication.JWTAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
-    "DEFAULT_PAGINATION_CLASS": "core.paginacion.Paginacion",
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "COERCE_DECIMAL_TO_STRING": False,
 }

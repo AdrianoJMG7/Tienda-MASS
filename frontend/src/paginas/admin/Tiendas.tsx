@@ -16,7 +16,7 @@ function FormularioTienda({ tienda, alGuardar }: { tienda: Tienda | null; alGuar
 
   async function guardar(evento: FormEvent) {
     evento.preventDefault();
-    const ok = await enviar(() => (tienda ? patch(`/tiendas/${tienda.id}/`, datos) : post("/tiendas/", datos)));
+    const ok = await enviar(() => (tienda ? patch(`/tiendas/tiendas/${tienda.id}/`, datos) : post("/tiendas/tiendas/", datos)));
     if (ok) alGuardar();
   }
 
@@ -41,7 +41,7 @@ function FormularioTienda({ tienda, alGuardar }: { tienda: Tienda | null; alGuar
 }
 
 export default function Tiendas() {
-  const { datos: tiendas, error, cargando, recargar } = useCarga<Tienda[]>("/tiendas/");
+  const { datos: tiendas, error, cargando, recargar } = useCarga<Tienda[]>("/tiendas/tiendas/");
   const [editando, setEditando] = useState<Tienda | null | undefined>(undefined);
   const [aviso, setAviso] = useState("");
 
@@ -49,7 +49,7 @@ export default function Tiendas() {
     const accion = tienda.activa ? "desactivar" : "activar";
     if (tienda.activa && !confirm(`¿Desactivar ${tienda.nombre}? Dejará de aparecer como punto de recojo.`)) return;
     try {
-      await patch(`/tiendas/${tienda.id}/`, { activa: !tienda.activa });
+      await patch(`/tiendas/tiendas/${tienda.id}/`, { activa: !tienda.activa });
       setAviso(`${tienda.nombre} fue ${tienda.activa ? "desactivada" : "activada"}.`);
       recargar();
     } catch {

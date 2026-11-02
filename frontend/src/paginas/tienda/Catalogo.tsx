@@ -19,8 +19,8 @@ export default function Catalogo() {
   const { usuario } = useSesion();
   const puedeComprar = !usuario || usuario.rol === "cliente";
   const { tienda, elegirTienda } = useCarrito();
-  const { datos: tiendas } = useCarga<Tienda[]>("/tiendas/");
-  const { datos: categorias } = useCarga<Categoria[]>("/categorias/");
+  const { datos: tiendas } = useCarga<Tienda[]>("/tiendas/tiendas/");
+  const { datos: categorias } = useCarga<Categoria[]>("/categorias/categorias/");
 
   const [filtros, setFiltros] = useState(SIN_FILTROS);
   // Los campos de texto esperan a que el cliente deje de escribir antes de consultar.

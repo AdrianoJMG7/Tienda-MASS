@@ -31,7 +31,7 @@ function FormularioVendedor({ vendedor, tiendas, alGuardar }: PropsFormulario) {
     evento.preventDefault();
     const { password, ...resto } = datos;
     const cuerpo = { ...resto, tienda: Number(datos.tienda) || null, ...(password ? { password } : {}) };
-    const ok = await enviar(() => (vendedor ? patch(`/vendedores/${vendedor.id}/`, cuerpo) : post("/vendedores/", cuerpo)));
+    const ok = await enviar(() => (vendedor ? patch(`/auth/usuarios/${vendedor.id}/`, cuerpo) : post("/auth/usuarios/", cuerpo)));
     if (ok) alGuardar();
   }
 
@@ -81,7 +81,7 @@ export default function Vendedores() {
   const { datos: tiendas } = useCarga<Tienda[]>("/tiendas/");
   const q = useRetraso(filtros.q);
   const { datos, error, cargando, recargar } = useCarga<Paginado<Vendedor>>(
-    conFiltros("/vendedores/", { ...filtros, q }),
+    conFiltros("/auth/usuarios/", { ...filtros, q }),
   );
   const [editando, setEditando] = useState<Vendedor | null | undefined>(undefined);
   const [aviso, setAviso] = useState("");
@@ -90,10 +90,10 @@ export default function Vendedores() {
     try {
       if (v.is_active) {
         if (!confirm(`¿Desactivar a ${v.nombre}? No podrá iniciar sesión.`)) return;
-        await eliminar(`/vendedores/${v.id}/`);
+        await eliminar(`/auth/usuarios/${v.id}/`);
         setAviso(`${v.nombre} fue desactivado.`);
       } else {
-        await patch(`/vendedores/${v.id}/`, { is_active: true });
+        await patch(`/auth/usuarios/${v.id}/`, { is_active: true });
         setAviso(`${v.nombre} fue reactivado.`);
       }
       recargar();

@@ -12,7 +12,7 @@ function FormularioCategoria({ categoria, alGuardar }: { categoria: Categoria | 
   async function guardar(evento: FormEvent) {
     evento.preventDefault();
     const ok = await enviar(() =>
-      categoria ? patch(`/categorias/${categoria.id}/`, { nombre }) : post("/categorias/", { nombre }),
+      categoria ? patch(`/categorias/categorias/${categoria.id}/`, { nombre }) : post("/categorias/categorias/", { nombre }),
     );
     if (ok) alGuardar();
   }
@@ -29,14 +29,14 @@ function FormularioCategoria({ categoria, alGuardar }: { categoria: Categoria | 
 }
 
 export default function Categorias() {
-  const { datos, error, cargando, recargar } = useCarga<Categoria[]>("/categorias/");
+  const { datos, error, cargando, recargar } = useCarga<Categoria[]>("/categorias/categorias/");
   const [editando, setEditando] = useState<Categoria | null | undefined>(undefined);
   const [aviso, setAviso] = useState("");
 
   async function borrar(c: Categoria) {
     if (!confirm(`¿Eliminar la categoría ${c.nombre}?`)) return;
     try {
-      await eliminar(`/categorias/${c.id}/`);
+      await eliminar(`/categorias/categorias/${c.id}/`);
       setAviso("Categoría eliminada.");
       recargar();
     } catch (e) {
