@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, conFiltros } from "../../api";
 import Campo from "../../componentes/Campo";
 import Dialogo from "../../componentes/Dialogo";
+import EscanerQR from "../../componentes/EscanerQR";
 import type { ItemVenta, MedioPago, Paginado, Producto } from "../../tipos";
 import { useCarga, useEnvio, useRetraso } from "../../useCarga";
 
-/** HU12: registrar ventas en caja con búsqueda de productos y cálculo de vuelto. */
+/** HU12: registrar ventas en caja con búsqueda de productos y cálculo de vuelto. HU13: escanear códigos QR y USB. */
 export default function Caja() {
   const [busqueda, setBusqueda] = useState("");
   const q = useRetraso(busqueda);
@@ -14,6 +15,10 @@ export default function Caja() {
   const [montoRecibido, setMontoRecibido] = useState("");
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
   const [ventaReciente, setVentaReciente] = useState<any>(null);
+  const [escanerAbierto, setEscanerAbierto] = useState(false);
+  const [codigoEscaneado, setCodigoEscaneado] = useState<string | null>(null);
+  const teclasRef = useRef<string[]>([]);
+  const tiempoTeclasRef = useRef<number>(0);
 
   const { datos: productos } = useCarga<Paginado<Producto>>(
     q ? conFiltros("/productos/productos/", { q, page_size: 10 }) : null
@@ -77,6 +82,69 @@ export default function Caja() {
     setVentaReciente(null);
   }
 
+  // Detección de escáner USB (actúa como teclado rápido)
+  useEffect(() => {
+    function manejarKeyDown(evento: KeyboardEvent) {
+      const ahora = Date.now();
+      
+      // Si el campo de búsqueda tiene foco, no procesar como escáner USB
+      if (document.activeElement instanceof HTMLInputElement && document.activeElement.type === "search") {
+        return;
+      }
+
+      // Si no teclas en los últimos 100ms, reiniciar buffer
+      if (ahora - tiempoTeclasRef.current > 100) {
+        teclasRef.current = [];
+      }
+      
+      tiempoTeclasRef.current = ahora;
+      
+      if (evento.key === "Enter") {
+        // Si hay teclas acumuladas, es probablemente un escáner USB
+        if (teclasRef.current.length > 0) {
+          const codigo = teclasRef.current.join("");
+          teclasRef.current = [];
+          evento.preventDefault();
+          manejarEscanear(codigo);
+        }
+      } else if (evento.key.length === 1) {
+        // Acumular teclas (solo caracteres imprimibles)
+        teclasRef.current.push(evento.key);
+      }
+    }
+
+    window.addEventListener("keydown", manejarKeyDown);
+    return () => window.removeEventListener("keydown", manejarKeyDown);
+  }, []);
+
+  async function buscarPorCodigoBarras(codigo: string) {
+    try {
+      const respuesta = await api<Paginado<Producto>>(
+        conFiltros("/productos/productos/", { codigo_barras: codigo, page_size: 1 })
+      );
+      return respuesta.results?.[0] || null;
+    } catch (error) {
+      console.error("Error al buscar por código de barras:", error);
+      return null;
+    }
+  }
+
+  async function manejarEscanear(codigo: string) {
+    const producto = await buscarPorCodigoBarras(codigo);
+    if (producto) {
+      agregarProducto(producto);
+    } else {
+      alert("Código no encontrado en el catálogo. Por favor, busca el producto por nombre.");
+      setBusqueda(codigo);
+      // Cerrar el escáner y poner foco en el campo de búsqueda
+      setEscanerAbierto(false);
+      setTimeout(() => {
+        const input = document.querySelector('input[type="search"]') as HTMLInputElement;
+        if (input) input.focus();
+      }, 100);
+    }
+  }
+
   return (
     <section>
       <div className="barra-titulo">
@@ -106,7 +174,7 @@ export default function Caja() {
         </div>
       ) : (
         <>
-          <div className="filtros">
+          <div className="filtros campo-con-escaner">
             <Campo
               etiqueta="Buscar producto (código o nombre)"
               type="search"
@@ -115,6 +183,15 @@ export default function Caja() {
               onChange={(e) => setBusqueda(e.target.value)}
               autoFocus
             />
+            <button
+              type="button"
+              className="boton-escaner"
+              onClick={() => setEscanerAbierto(true)}
+              aria-label="Escanear código QR"
+              title="Escanear código QR"
+            >
+              📷
+            </button>
           </div>
 
           {productos && productos.results && productos.results.length > 0 && (
@@ -290,6 +367,8 @@ export default function Caja() {
               </div>
             </Dialogo>
           )}
+
+          <EscanerQR abierto={escanerAbierto} alCerrar={() => setEscanerAbierto(false)} alEscanear={manejarEscanear} />
         </>
       )}
     </section>

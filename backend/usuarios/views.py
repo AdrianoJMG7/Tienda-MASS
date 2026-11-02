@@ -82,7 +82,7 @@ class InicioView(APIView):
             menu = [
                 {"clave": "pedidos", "titulo": "Pedidos online", "hu": "HU10", "disponible": True, "ruta": "/vendedor/pedidos"},
                 {"clave": "caja", "titulo": "Caja", "hu": "HU12", "disponible": True, "ruta": "/vendedor/caja"},
-                {"clave": "stock", "titulo": "Stock de mi tienda", "hu": "HU14", "disponible": False, "ruta": "/vendedor/stock"},
+                {"clave": "inventario", "titulo": "Inventario", "hu": "HU14", "disponible": True, "ruta": "/vendedor/inventario"},
             ]
         elif rol == "cliente":
             menu = [

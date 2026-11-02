@@ -22,7 +22,10 @@ Equipo: Oder, Adriano y Daniel. Ingeniería de Sistemas, Lima 2026.
 | HU10 | Gestionar pedidos de la tienda: lista por estado, preparar, marcar listo, entregar y cancelar | Hecho |
 | HU11 | Consultar estado e historial de pedidos del cliente; cancelar pedidos pendientes | Hecho |
 | HU12 | Registrar venta en caja: agregar productos, calcular total, medios de pago con vuelto | Hecho |
-| HU13 a HU20 | Sprints 4 y 5 (escáner de códigos, inventario, reportes, diseño responsivo y demo) | Pendiente |
+| HU13 | Escanear código de barras: escanear QR con cámara o código de barras con escáner USB para agregar productos a la venta sin buscar | Hecho |
+| HU14 | Consultar stock y alertas: stock disponible y reservado, alertas de stock bajo y vencimiento en 7 días | Hecho |
+| HU15 | Registrar ingresos y mermas: ingreso con cantidad y vencimiento, merma con motivo (vencido/dañado), historial de movimientos | Hecho |
+| HU16 a HU20 | Sprints 4 y 5 (reportes, diseño responsivo y demo) | Pendiente |
 
 ## Tecnologías
 
@@ -114,6 +117,11 @@ La documentación interactiva está en http://localhost:8000/api/docs/ (Swagger/
 | POST | `/api/pedidos/{id}/cancelar/` | Cliente/Vendedor | Cancelar pedido con motivo; libera el stock reservado |
 | POST | `/api/ventas/crear/` | Vendedor | Registrar venta en caja `{medio_pago, monto_recibido, items: [{producto, cantidad}]}`; descuenta stock |
 | GET | `/api/ventas/` | Vendedor/Admin | Ventas de la tienda (vendedor) o todas (admin) |
+| GET | `/api/inventario/inventario/` | Vendedor | Stock de la tienda con filtros `q`, `categoria`, `estado` (bajo_stock, por_vencer) |
+| GET | `/api/inventario/inventario/alertas/` | Vendedor | Alertas de stock bajo y productos por vencer en 7 días |
+| GET | `/api/inventario/movimientos/` | Vendedor/Admin | Historial de movimientos de stock de la tienda (vendedor) o todas (admin) |
+| POST | `/api/inventario/inventario/ingreso/` | Vendedor | Registrar ingreso `[{producto, cantidad, fecha_vencimiento?, motivo?}]` |
+| POST | `/api/inventario/inventario/merma/` | Vendedor | Registrar merma `[{producto, cantidad, motivo: vencido/dañado, nota?}]` |
 
 ## Pruebas
 

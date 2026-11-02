@@ -116,3 +116,33 @@ def verificar_stock(tienda, items):
             )
     if sin_stock:
         raise StockInsuficiente(f"No hay stock suficiente en {tienda.nombre} para algunos productos.", sin_stock)
+
+
+@transaction.atomic
+def registrar_ingreso(tienda, items, usuario=None, motivo="", fecha_vencimiento=None):
+    """HU15: registra ingreso de mercadería, aumenta el stock y actualiza fecha de vencimiento si se proporciona."""
+    for producto, cantidad in items:
+        stock, _ = Stock.objects.get_or_create(tienda=tienda, producto=producto, defaults={"cantidad": 0})
+        stock.cantidad = F("cantidad") + cantidad
+        if fecha_vencimiento is not None:
+            stock.fecha_vencimiento = fecha_vencimiento
+        stock.save()
+    _registrar(tienda, items, Tipo.INGRESO, usuario, "", motivo)
+
+
+@transaction.atomic
+def registrar_merma(tienda, items, usuario=None, motivo=""):
+    """HU15: registra merma de mercadería, disminuye el stock."""
+    sin_stock = []
+    for producto, cantidad in items:
+        filas = Stock.objects.filter(tienda=tienda, producto=producto, cantidad__gte=cantidad).update(
+            cantidad=F("cantidad") - cantidad
+        )
+        if filas == 0:
+            disponible = Stock.objects.filter(tienda=tienda, producto=producto).values_list("cantidad", flat=True).first()
+            sin_stock.append(
+                {"producto": producto.id, "nombre": producto.nombre, "disponible": disponible or 0, "solicitado": cantidad}
+            )
+    if sin_stock:
+        raise StockInsuficiente(f"No hay stock suficiente en {tienda.nombre} para registrar la merma.", sin_stock)
+    _registrar(tienda, items, Tipo.MERMA, usuario, "", motivo)
