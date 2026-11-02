@@ -2,11 +2,11 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from choices import MedioPago
+from choices import CanalVenta, MedioPago
 
 
 class Venta(models.Model):
-    """Venta en caja de tienda física."""
+    """Venta de una tienda: en caja, o web cuando el vendedor entrega un pedido online."""
 
     tienda = models.ForeignKey("tienda.Tienda", on_delete=models.PROTECT, related_name="ventas")
     vendedor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="ventas")
@@ -14,6 +14,11 @@ class Venta(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2)
     medio_pago = models.CharField(max_length=10, choices=MedioPago.choices)
     numero_ticket = models.CharField(max_length=20, blank=True, null=True)
+    canal = models.CharField(max_length=4, choices=CanalVenta.choices, default=CanalVenta.CAJA)
+    pedido = models.OneToOneField(
+        "pedido.Pedido", null=True, blank=True, on_delete=models.PROTECT, related_name="venta",
+        help_text="Pedido online que originó la venta (canal web)",
+    )
 
     class Meta:
         ordering = ["-fecha"]

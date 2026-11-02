@@ -29,6 +29,9 @@ class VentaSerializer(serializers.ModelSerializer):
             "total",
             "medio_pago",
             "numero_ticket",
+            "canal",
+            "pedido",
             "detalles",
         ]
-        read_only_fields = ["fecha"]
+        # Las ventas web solo nacen al entregar un pedido (HU10), no se crean a mano.
+        read_only_fields = ["fecha", "canal", "pedido"]

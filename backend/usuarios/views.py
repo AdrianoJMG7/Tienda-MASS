@@ -81,14 +81,14 @@ class InicioView(APIView):
         elif rol == "vendedor":
             menu = [
                 {"clave": "pedidos", "titulo": "Pedidos online", "hu": "HU10", "disponible": True, "ruta": "/vendedor/pedidos"},
-                {"clave": "ventas", "titulo": "Ventas en caja", "hu": "HU12", "disponible": True, "ruta": "/vendedor/ventas"},
-                {"clave": "stock", "titulo": "Stock de mi tienda", "hu": "HU14", "disponible": True, "ruta": "/vendedor/stock"},
+                {"clave": "ventas", "titulo": "Ventas en caja", "hu": "HU12", "disponible": False, "ruta": "/vendedor/ventas"},
+                {"clave": "stock", "titulo": "Stock de mi tienda", "hu": "HU14", "disponible": False, "ruta": "/vendedor/stock"},
             ]
         elif rol == "cliente":
             menu = [
                 {"clave": "catalogo", "titulo": "Catálogo", "hu": "HU06", "disponible": True, "ruta": "/catalogo"},
                 {"clave": "carrito", "titulo": "Mi carrito", "hu": "HU07", "disponible": True, "ruta": "/carrito"},
-                {"clave": "pedidos", "titulo": "Mis pedidos", "hu": "HU11", "disponible": True, "ruta": "/cliente/pedidos"},
+                {"clave": "pedidos", "titulo": "Mis pedidos", "hu": "HU11", "disponible": False, "ruta": "/cliente/pedidos"},
             ]
 
         return Response({

@@ -6,7 +6,8 @@ from tienda.models import Tienda
 from categoria.models import Categoria
 from producto.models import Producto
 from inventario.models import Stock
-from pedido.models import Pedido, DetallePedido
+from pedido import servicios as servicios_pedido
+from pedido.models import Pedido
 from venta.models import Venta, DetalleVenta
 from usuarios.models import Usuario
 
@@ -167,22 +168,17 @@ class Command(BaseCommand):
         productos_pedido = productos[:3]
 
         if not Pedido.objects.filter(cliente=cliente).exists():
-            pedido = Pedido.objects.create(
-                cliente=cliente,
-                tienda=tienda,
-                codigo_recojo="ABC123",
-                medio_pago="efectivo",
-                total=20.50,
-                vence_en=timezone.now(),
-            )
-            for producto in productos_pedido:
-                DetallePedido.objects.create(
-                    pedido=pedido,
-                    producto=producto,
-                    cantidad=2,
-                    precio_unitario=producto.precio,
-                )
-            self.stdout.write(f"[OK] Pedido creado: {pedido.codigo_recojo}")
+            # Se crean con el servicio real para que reserven stock (HU09), y en distintos
+            # estados para que el vendedor de la tienda tenga pedidos que atender (HU10).
+            vendedor_tienda = Usuario.objects.filter(rol="vendedor", tienda=tienda).first()
+            for i, estado in enumerate(["recibido", "en_preparacion", "listo"]):
+                items = [{"producto": p.id, "cantidad": 2} for p in productos_pedido[i : i + 2]]
+                pedido = servicios_pedido.crear_pedido(cliente, tienda, items, "efectivo")
+                if estado != "recibido":
+                    pedido = servicios_pedido.preparar(pedido, vendedor_tienda)
+                if estado == "listo":
+                    pedido = servicios_pedido.marcar_listo(pedido, vendedor_tienda)
+                self.stdout.write(f"[OK] Pedido #{pedido.id} creado ({pedido.get_estado_display()})")
 
         # Crear algunas ventas de ejemplo
         vendedor = Usuario.objects.filter(rol="vendedor").first()

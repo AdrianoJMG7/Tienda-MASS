@@ -11,13 +11,13 @@ def _soles(valor):
     return f"S/ {valor:,.2f}"
 
 
-def enviar_confirmacion(pedido_id):
-    """HU08: correo al cliente con el resumen del pedido y su código de recojo."""
+def _cargar(pedido_id):
     from .models import Pedido
 
-    pedido = Pedido.objects.select_related("cliente", "tienda").prefetch_related("detalles__producto").get(
-        pk=pedido_id
-    )
+    return Pedido.objects.select_related("cliente", "tienda").prefetch_related("detalles__producto").get(pk=pedido_id)
+
+
+def _enviar(pedido, asunto, introduccion):
     tienda = pedido.tienda
     lineas = [
         f"  {d.cantidad} x {d.producto.nombre} ({d.producto.marca}) .... {_soles(d.subtotal)}"
@@ -28,7 +28,7 @@ def enviar_confirmacion(pedido_id):
         [
             f"Hola, {pedido.cliente.nombre.split()[0]}:",
             "",
-            "Recibimos tu pedido. Te avisaremos por correo cuando esté listo para recoger.",
+            introduccion,
             "",
             f"CÓDIGO DE RECOJO: {pedido.codigo_recojo}",
             "",
@@ -48,12 +48,27 @@ def enviar_confirmacion(pedido_id):
         ]
     )
     try:
-        send_mail(
-            subject=f"Tu pedido {pedido.codigo_recojo} para recoger en {tienda.nombre}",
-            message=cuerpo,
-            from_email=None,
-            recipient_list=[pedido.cliente.email],
-        )
+        send_mail(subject=asunto, message=cuerpo, from_email=None, recipient_list=[pedido.cliente.email])
     except Exception:
-        # Si el correo falla, el pedido sigue siendo válido: el código también se ve en la web.
+        # Si el correo falla, el pedido sigue siendo válido: el estado también se ve en la web.
         logger.exception("No se pudo enviar el correo del pedido %s", pedido.codigo_recojo)
+
+
+def enviar_confirmacion(pedido_id):
+    """HU08: correo al cliente con el resumen del pedido y su código de recojo."""
+    pedido = _cargar(pedido_id)
+    _enviar(
+        pedido,
+        f"Tu pedido {pedido.codigo_recojo} para recoger en {pedido.tienda.nombre}",
+        "Recibimos tu pedido. Te avisaremos por correo cuando esté listo para recoger.",
+    )
+
+
+def enviar_listo(pedido_id):
+    """HU10: aviso al cliente de que su pedido ya está listo para recoger."""
+    pedido = _cargar(pedido_id)
+    _enviar(
+        pedido,
+        f"Tu pedido {pedido.codigo_recojo} está listo para recoger",
+        f"¡Tu pedido está listo! Acércate a {pedido.tienda.nombre} y muestra tu código en caja.",
+    )

@@ -9,4 +9,6 @@ class StockSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Stock
-        fields = ["id", "tienda", "producto", "cantidad", "producto_nombre", "tienda_codigo"]
+        fields = ["id", "tienda", "producto", "cantidad", "reservado", "producto_nombre", "tienda_codigo"]
+        # Lo reservado solo cambia con los pedidos (HU09), nunca a mano.
+        read_only_fields = ["reservado"]

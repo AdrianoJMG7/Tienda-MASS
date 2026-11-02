@@ -14,6 +14,13 @@ class EsAdmin(BasePermission):
         return tiene_rol(request.user, Rol.ADMIN)
 
 
+class EsVendedor(BasePermission):
+    message = "Solo los vendedores pueden realizar esta acción."
+
+    def has_permission(self, request, view):
+        return tiene_rol(request.user, Rol.VENDEDOR) and request.user.tienda_id is not None
+
+
 class EsCliente(BasePermission):
     message = "Solo los clientes pueden realizar esta acción."
 
