@@ -1,8 +1,9 @@
-from django.urls import reverse
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from categoria.models import Categoria
+from usuarios.models import Rol
 from .models import Producto
 
 
@@ -11,6 +12,13 @@ class ProductoTests(APITestCase):
 
     def setUp(self):
         self.categoria = Categoria.objects.create(nombre="Lácteos")
+        self.admin = get_user_model().objects.create_user(
+            email="admin@test.com",
+            nombre="Admin Test",
+            password="Test1234",
+            rol=Rol.ADMIN,
+        )
+        self.client.force_authenticate(user=self.admin)
 
     def test_crear_producto(self):
         datos = {

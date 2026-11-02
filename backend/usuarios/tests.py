@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Usuario
+from .models import Rol, Usuario
 
 DATOS_REGISTRO = {
     "email": "Ana.Perez@Correo.pe",
@@ -26,7 +26,7 @@ class RegistroTests(APITestCase):
         self.assertEqual(respuesta.status_code, status.HTTP_201_CREATED)
         self.assertNotIn("password", respuesta.data)
         usuario = Usuario.objects.get(email="ana.perez@correo.pe")
-        self.assertEqual(usuario.rol, Usuario.CLIENTE)
+        self.assertEqual(usuario.rol, Rol.CLIENTE)
         self.assertTrue(usuario.password.startswith("bcrypt_sha256$"))
         self.assertIsNotNone(usuario.acepto_privacidad_en)
 
@@ -58,4 +58,4 @@ class RegistroTests(APITestCase):
 
     def test_no_permite_elegir_rol(self):
         self.client.post(self.url, {**DATOS_REGISTRO, "rol": "admin"}, format="json")
-        self.assertEqual(Usuario.objects.get(email="ana.perez@correo.pe").rol, Usuario.CLIENTE)
+        self.assertEqual(Usuario.objects.get(email="ana.perez@correo.pe").rol, Rol.CLIENTE)

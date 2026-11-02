@@ -1,8 +1,11 @@
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from categoria.models import Categoria
 from producto.models import Producto
 from tienda.models import Tienda
+from usuarios.models import Rol
 from .models import Stock
 
 
@@ -20,8 +23,16 @@ class StockTests(APITestCase):
             nombre="Leche Entera",
             marca="Gloria",
             codigo_barras="1234567890123",
+            categoria=Categoria.objects.create(nombre="Lácteos"),
             precio="5.50",
         )
+        self.admin = get_user_model().objects.create_user(
+            email="admin@test.com",
+            nombre="Admin Test",
+            password="Test1234",
+            rol=Rol.ADMIN,
+        )
+        self.client.force_authenticate(user=self.admin)
 
     def test_crear_stock(self):
         datos = {
