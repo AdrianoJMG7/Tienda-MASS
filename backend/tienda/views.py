@@ -1,5 +1,8 @@
-from rest_framework import permissions, viewsets
+from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
+
+from usuarios.models import Rol
+from usuarios.permisos import LecturaPublicaEscrituraAdmin
 
 from .models import Tienda
 from .serializers import TiendaSerializer
@@ -10,9 +13,18 @@ class NoPagination(PageNumberPagination):
 
 
 class TiendaViewSet(viewsets.ModelViewSet):
-    """Gestión de tiendas."""
+    """Gestión de tiendas.
+
+    El público y los clientes solo ven las tiendas activas: son los puntos de recojo (HU07).
+    El administrador ve todas y es el único que las registra o edita.
+    """
 
     serializer_class = TiendaSerializer
-    queryset = Tienda.objects.all()
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [LecturaPublicaEscrituraAdmin]
     pagination_class = NoPagination
+
+    def get_queryset(self):
+        usuario = self.request.user
+        if usuario.is_authenticated and usuario.rol == Rol.ADMIN:
+            return Tienda.objects.all()
+        return Tienda.objects.filter(activa=True)

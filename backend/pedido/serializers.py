@@ -1,36 +1,63 @@
 from rest_framework import serializers
 
+from choices import MedioPago
+from tienda.models import Tienda
+from tienda.serializers import TiendaSerializer
+
 from .models import DetallePedido, Pedido
 
 
+class ItemPedidoSerializer(serializers.Serializer):
+    producto = serializers.IntegerField(min_value=1)
+    cantidad = serializers.IntegerField(min_value=1, max_value=99)
+
+
+class CrearPedidoSerializer(serializers.Serializer):
+    """Lo que envía el cliente al confirmar: el resto (código, precios, total) lo calcula el servidor."""
+
+    tienda = serializers.PrimaryKeyRelatedField(queryset=Tienda.objects.all())
+    medio_pago = serializers.ChoiceField(
+        choices=MedioPago.choices, error_messages={"invalid_choice": "Elige efectivo, tarjeta o Yape/Plin."}
+    )
+    items = ItemPedidoSerializer(many=True, max_length=60)
+
+    def validate_items(self, items):
+        if not items:
+            raise serializers.ValidationError("Tu carrito está vacío.")
+        return items
+
+
 class DetallePedidoSerializer(serializers.ModelSerializer):
-    producto_nombre = serializers.CharField(source="producto.nombre", read_only=True)
-    subtotal = serializers.ReadOnlyField()
+    nombre = serializers.CharField(source="producto.nombre", read_only=True)
+    marca = serializers.CharField(source="producto.marca", read_only=True)
+    foto = serializers.ImageField(source="producto.foto", read_only=True)
+    subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
 
     class Meta:
         model = DetallePedido
-        fields = ["id", "producto", "producto_nombre", "cantidad", "precio_unitario", "subtotal"]
+        fields = ["producto", "nombre", "marca", "foto", "cantidad", "precio_unitario", "subtotal"]
 
 
 class PedidoSerializer(serializers.ModelSerializer):
-    detalles = DetallePedidoSerializer(many=True, read_only=True)
+    tienda = TiendaSerializer(read_only=True)
     cliente_nombre = serializers.CharField(source="cliente.nombre", read_only=True)
-    tienda_codigo = serializers.CharField(source="tienda.codigo", read_only=True)
+    estado_display = serializers.CharField(source="get_estado_display", read_only=True)
+    medio_pago_display = serializers.CharField(source="get_medio_pago_display", read_only=True)
+    detalles = DetallePedidoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Pedido
         fields = [
             "id",
-            "cliente",
+            "codigo_recojo",
+            "estado",
+            "estado_display",
             "cliente_nombre",
             "tienda",
-            "tienda_codigo",
-            "estado",
-            "codigo_recojo",
             "medio_pago",
+            "medio_pago_display",
             "total",
             "creado",
             "vence_en",
             "detalles",
         ]
-        read_only_fields = ["creado"]

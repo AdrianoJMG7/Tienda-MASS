@@ -1,3 +1,4 @@
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -202,6 +203,10 @@ class Command(BaseCommand):
                         precio_unitario=producto.precio,
                     )
                 self.stdout.write(f"[OK] Venta creada: {venta.numero_ticket}")
+
+        # HU05: catálogo inicial de unos 800 productos y stock simulado por tienda (HU06, HU07).
+        call_command("cargar_catalogo", stdout=self.stdout)
+        call_command("cargar_stock", stdout=self.stdout)
 
         self.stdout.write(self.style.SUCCESS("[OK] Datos de prueba cargados exitosamente"))
         self.stdout.write("\nCredenciales de prueba:")
