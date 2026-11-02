@@ -119,6 +119,29 @@ export async function api<T>(ruta: string, opciones: RequestInit = {}, reintenta
   return (await respuesta.json()) as T;
 }
 
+/** Descarga un archivo de la API (p. ej. un reporte en Excel o PDF) y lo guarda con el nombre que indica el servidor. */
+export async function descargar(ruta: string, reintentar = true): Promise<void> {
+  const tokens = leerTokens();
+  let respuesta: Response;
+  try {
+    respuesta = await fetch(`${BASE}${ruta}`, { headers: tokens ? { Authorization: `Bearer ${tokens.access}` } : {} });
+  } catch {
+    throw new ErrorApi(0, "No hay conexión con el servidor.");
+  }
+  if (respuesta.status === 401 && tokens && reintentar && (await renovar(tokens.refresh))) {
+    return descargar(ruta, false);
+  }
+  if (!respuesta.ok) throw await convertirError(respuesta);
+
+  const nombre = /filename="([^"]+)"/.exec(respuesta.headers.get("Content-Disposition") ?? "")?.[1] ?? "reporte";
+  const url = URL.createObjectURL(await respuesta.blob());
+  const enlace = document.createElement("a");
+  enlace.href = url;
+  enlace.download = nombre;
+  enlace.click();
+  URL.revokeObjectURL(url);
+}
+
 const cuerpo = (datos: unknown) => (datos instanceof FormData ? datos : JSON.stringify(datos));
 
 export const post = <T>(ruta: string, datos: unknown) => api<T>(ruta, { method: "POST", body: cuerpo(datos) });

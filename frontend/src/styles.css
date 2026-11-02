@@ -1813,3 +1813,171 @@ fieldset.selector-tienda legend,
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ---------- Reportes (HU16 y HU17) ---------- */
+
+.acciones-exportar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filtros-reporte {
+  align-items: end;
+}
+
+.periodos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.chip {
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--azul);
+}
+
+.chip.activo {
+  border-color: var(--azul);
+  background: var(--azul-claro);
+  color: var(--azul-oscuro);
+  font-weight: 700;
+}
+
+.panel-reportes[aria-busy="true"] {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 12px 0 16px;
+}
+
+.indicador {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--superficie);
+}
+
+.indicador-titulo {
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.indicador-valor {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.grafico {
+  margin-bottom: 16px;
+}
+
+.grafico h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.grafico details {
+  margin-top: 8px;
+}
+
+.grafico summary {
+  color: var(--azul);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.grafico .tabla {
+  margin-top: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltip-grafico {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 0.85rem;
+  box-shadow: 0 4px 12px rgba(20, 26, 51, 0.12);
+}
+
+.tooltip-total {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid var(--borde);
+  font-weight: 700;
+}
+
+.muestra {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 50%;
+}
+
+.rejilla-reportes {
+  display: grid;
+  gap: 16px;
+}
+
+.rejilla-reportes .tarjeta {
+  margin-bottom: 0;
+}
+
+.top-productos {
+  margin: 0;
+  padding-left: 1.4em;
+}
+
+.top-productos li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.top-productos li:last-child {
+  border-bottom: 0;
+}
+
+.top-productos li > span:first-child {
+  display: inline-block;
+  max-width: 65%;
+}
+
+.top-cifras {
+  float: right;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 768px) {
+  .rejilla-reportes {
+    grid-template-columns: 1fr 1fr;
+  }
+}

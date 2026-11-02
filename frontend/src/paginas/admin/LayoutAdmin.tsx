@@ -7,6 +7,7 @@ const SECCIONES = [
   { ruta: "/admin/productos", texto: "Catálogo" },
   { ruta: "/admin/ofertas", texto: "Ofertas" },
   { ruta: "/admin/categorias", texto: "Categorías" },
+  { ruta: "/admin/reportes", texto: "Reportes" },
 ];
 
 export default function LayoutAdmin() {
