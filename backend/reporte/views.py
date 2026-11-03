@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from usuarios.permisos import EsAdmin
 
 from . import exportar, servicios
-from .serializers import ExportarSerializer, FiltrosReporteSerializer
+from .serializers import ExportarSerializer, FiltrosReporteSerializer, PruebaUsabilidadSerializer
 
 PARAMETROS = [
     OpenApiParameter("desde", OpenApiTypes.DATE, description="Inicio del periodo (por defecto, hace 30 días)"),
@@ -54,4 +54,24 @@ class ExportarView(APIView):
             nombre += f"-{filtros.tienda.codigo}"
         respuesta = HttpResponse(contenido, content_type=TIPOS[formato])
         respuesta["Content-Disposition"] = f'attachment; filename="{nombre}.{formato}"'
+        return respuesta
+
+
+class UsabilidadView(APIView):
+    """HU18: genera reporte PDF de pruebas de usabilidad."""
+
+    permission_classes = [EsAdmin]
+
+    @extend_schema(
+        request=PruebaUsabilidadSerializer,
+        responses={(200, "application/pdf"): OpenApiTypes.BINARY},
+    )
+    def post(self, request):
+        entrada = PruebaUsabilidadSerializer(data=request.data)
+        entrada.is_valid(raise_exception=True)
+        datos = entrada.validated_data
+        contenido = exportar.pdf_usabilidad(datos)
+
+        respuesta = HttpResponse(contenido, content_type="application/pdf")
+        respuesta["Content-Disposition"] = 'attachment; filename="reporte-usabilidad-mass.pdf"'
         return respuesta

@@ -27,7 +27,8 @@ Equipo: Oder, Adriano y Daniel. Ingeniería de Sistemas, Lima 2026.
 | HU15 | Registrar ingresos y mermas: ingreso con cantidad y vencimiento, merma con motivo (vencido/dañado), historial de movimientos | Hecho |
 | HU16 | Panel de ventas y pedidos: ventas por tienda y canal con ticket promedio, pedidos por estado, tiempo de preparación y productos más vendidos, filtrable por periodo y tienda | Hecho |
 | HU17 | Exportar reportes a Excel o PDF respetando los filtros del panel | Hecho |
-| HU18 a HU20 | Sprints 4 y 5 (simulación y usabilidad, diseño responsivo y demo) | Pendiente |
+| HU18 | Simular operación y validar usabilidad: script de 1 mes de datos (ventas, pedidos, ingresos, mermas), protocolo de pruebas para 6 usuarios, reporte PDF con gráficos de tiempo por tarea | Hecho |
+| HU19 a HU20 | Sprints 4 y 5 (diseño responsivo y demo) | Pendiente |
 
 ## Tecnologías
 
@@ -72,7 +73,7 @@ python -m venv .venv
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py cargar_demo     # 5 tiendas, cuentas demo, 800 productos y su stock
-python manage.py simular_ventas  # 30 días de ventas y pedidos para los reportes (opcional: --dias 90)
+python manage.py simular_ventas  # 30 días de ventas, pedidos, ingresos y mermas para los reportes (opcional: --dias 90)
 python manage.py runserver
 ```
 
@@ -126,6 +127,9 @@ La documentación interactiva está en http://localhost:8000/api/docs/ (Swagger/
 | GET | `/api/inventario/movimientos/` | Vendedor/Admin | Historial de movimientos de stock de la tienda (vendedor) o todas (admin) |
 | POST | `/api/inventario/inventario/ingreso/` | Vendedor | Registrar ingreso `[{producto, cantidad, fecha_vencimiento?, motivo?}]` |
 | POST | `/api/inventario/inventario/merma/` | Vendedor | Registrar merma `[{producto, cantidad, motivo: vencido/dañado, nota?}]` |
+| GET | `/api/reportes/panel/` | Administrador | Panel de ventas y pedidos con filtros `desde`, `hasta`, `tienda` |
+| GET | `/api/reportes/exportar/` | Administrador | Exportar reporte en Excel (`formato=xlsx`) o PDF (`formato=pdf`) |
+| POST | `/api/reportes/usabilidad/` | Administrador | Generar reporte PDF de pruebas de usabilidad con datos de tiempo por tarea |
 
 ## Pruebas
 
@@ -133,6 +137,27 @@ La documentación interactiva está en http://localhost:8000/api/docs/ (Swagger/
 cd backend && python manage.py test      # 50 pruebas de HU02 a HU08
 cd frontend && npm run lint && npm run build
 ```
+
+GitHub Actions ejecuta lo mismo en cada pull request (`.github/workflows/ci.yml`).
+
+## Pruebas de Usabilidad (HU18)
+
+El proyecto incluye un protocolo de pruebas de usabilidad para validar que el sistema es útil y fácil de usar.
+
+**Protocolo de pruebas:** Ver `PROTOCOLO_USABILIDAD.md` para las tareas específicas por rol (admin, vendedor, cliente) y la hoja de registro.
+
+**Generación de reporte:**
+1. Ejecutar el comando de simulación: `python manage.py simular_ventas --dias 30`
+2. Iniciar sesión como admin y navegar a Reportes
+3. Hacer clic en "Reporte usabilidad"
+4. Ingresar los datos de las pruebas (usuario, rol, tareas con tiempo y completada)
+5. Hacer clic en "Generar PDF" para descargar el reporte con gráficos
+
+**Gráficos incluidos en el reporte:**
+- Tiempo promedio por rol
+- Tiempo promedio por tarea
+- Tasa de completación por tarea
+- Tabla detallada por usuario
 
 GitHub Actions ejecuta lo mismo en cada pull request (`.github/workflows/ci.yml`).
 
