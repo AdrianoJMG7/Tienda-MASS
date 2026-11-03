@@ -1,4 +1,4 @@
-"""Simula ventas en caja y pedidos online pasados para que el panel de reportes (HU16) tenga datos.
+"""Simula ventas en caja, pedidos online, ingresos y mermas de inventario para HU18.
 
 Es historia ya cerrada: los pedidos quedan entregados o cancelados y no se toca el stock actual.
 Se puede volver a correr: borra la simulación anterior y la crea de nuevo (misma semilla, mismos datos).
@@ -13,6 +13,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from choices import CanalVenta, EstadoPedido, MedioPago
+from inventario.servicios import registrar_ingreso, registrar_merma
 from pedido.models import CanceladoPor, DetallePedido, Pedido
 from pedido.servicios import ALFABETO_CODIGO
 from producto.models import Producto
@@ -26,7 +27,7 @@ MOTIVOS = ["No se recogió a tiempo", "El cliente ya no lo necesita", "Producto 
 
 
 class Command(BaseCommand):
-    help = "Simula ventas en caja y pedidos online de los últimos días en todas las tiendas (para HU16)."
+    help = "Simula ventas en caja, pedidos online, ingresos y mermas de los últimos días en todas las tiendas (para HU18)."
 
     def add_arguments(self, parser):
         parser.add_argument("--dias", type=int, default=30, help="Días hacia atrás a simular (por defecto 30)")
@@ -59,11 +60,13 @@ class Command(BaseCommand):
         hoy = ahora.date()
 
         ventas, detalles_venta, pedidos, detalles_pedido = [], [], [], []
+        ingresos_items, mermas_items = [], []
         for tienda in tiendas:
             ritmo = azar.uniform(0.6, 1.4)  # unas tiendas venden más que otras
             for atras in range(dias - 1, -1, -1):
                 dia = hoy - timedelta(days=atras)
-                for _ in range(round(azar.randint(6, 14) * ritmo)):
+                # Ventas en caja: 10 por día por tienda
+                for _ in range(10):
                     momento = self._momento(azar, dia, ahora)
                     if momento is None:
                         continue
@@ -76,7 +79,8 @@ class Command(BaseCommand):
                     ventas.append(venta)
                     detalles_venta += [(venta, p, c) for p, c in items]
 
-                for _ in range(round(azar.randint(1, 5) * ritmo)):
+                # Pedidos online: 10 por día por tienda
+                for _ in range(10):
                     creado = self._momento(azar, dia, ahora - timedelta(hours=2))
                     if creado is None:
                         continue
@@ -105,6 +109,19 @@ class Command(BaseCommand):
                     pedidos.append(pedido)
                     detalles_pedido += [(pedido, p, c) for p, c in items]
 
+                # Ingresos de inventario: 5 por día por tienda (aleatorio)
+                for _ in range(5):
+                    producto = azar.choice(productos)
+                    cantidad = azar.randint(1, 10)
+                    ingresos_items.append((tienda, producto, cantidad, dia))
+
+                # Mermas de inventario: 2 por día por tienda (aleatorio)
+                for _ in range(2):
+                    producto = azar.choice(productos)
+                    cantidad = azar.randint(1, 5)
+                    motivo = azar.choice(["vencido", "dañado"])
+                    mermas_items.append((tienda, producto, cantidad, motivo, dia))
+
         Pedido.objects.bulk_create(pedidos)
         DetallePedido.objects.bulk_create(
             DetallePedido(pedido=pe, producto=p, cantidad=c, precio_unitario=p.precio) for pe, p, c in detalles_pedido
@@ -117,12 +134,28 @@ class Command(BaseCommand):
             DetalleVenta(venta=v, producto=p, cantidad=c, precio_unitario=p.precio) for v, p, c in detalles_venta
         )
 
+        # Registrar ingresos de inventario
+        for tienda, producto, cantidad, dia in ingresos_items:
+            fecha_vencimiento = dia + timedelta(days=azar.randint(30, 180))  # vencimiento entre 1-6 meses
+            try:
+                registrar_ingreso(tienda, [(producto, cantidad)], vendedores[tienda.id], "Simulación HU18", fecha_vencimiento)
+            except Exception:
+                pass  # Ignorar errores de stock
+
+        # Registrar mermas de inventario
+        for tienda, producto, cantidad, motivo, dia in mermas_items:
+            try:
+                registrar_merma(tienda, [(producto, cantidad)], vendedores[tienda.id], motivo)
+            except Exception:
+                pass  # Ignorar errores de stock insuficiente
+
         if borrados:
             self.stdout.write(f"Simulación anterior borrada ({borrados} ventas).")
         caja = sum(v.canal == CanalVenta.CAJA for v in ventas)
         self.stdout.write(self.style.SUCCESS(
             f"Simulados {dias} días en {len(tiendas)} tiendas: {caja} ventas en caja, "
-            f"{len(pedidos)} pedidos online ({len(ventas) - caja} entregados)."
+            f"{len(pedidos)} pedidos online ({len(ventas) - caja} entregados), "
+            f"{len(ingresos_items)} ingresos de inventario, {len(mermas_items)} mermas."
         ))
 
     @staticmethod

@@ -10,12 +10,25 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { conFiltros, descargar, ErrorApi } from "../../api";
+import { api, conFiltros, descargar, ErrorApi } from "../../api";
 import Campo from "../../componentes/Campo";
 import Seleccion from "../../componentes/Seleccion";
 import { formatoFecha, hoyIso, soles } from "../../formato";
 import type { Paginado, PanelReportes, Tienda } from "../../tipos";
 import { useCarga } from "../../useCarga";
+
+interface TareaUsabilidad {
+  tarea: string;
+  tiempo_segundos: number;
+  completada: boolean;
+  observaciones: string;
+}
+
+interface PruebaUsabilidad {
+  usuario: string;
+  rol: "admin" | "vendedor" | "cliente";
+  tareas: TareaUsabilidad[];
+}
 
 // Colores por canal (validados para daltonismo); el ámbar tiene poco contraste, por eso hay leyenda y tablas.
 const COLOR = { caja: "#2a78d6", web: "#eda100" };
@@ -67,13 +80,16 @@ function TooltipSoles({ active, payload, label, formatoEtiqueta }: {
   );
 }
 
-/** HU16 y HU17: panel de ventas y pedidos por tienda y canal, exportable a Excel o PDF. */
+/** HU16 y HU17: panel de ventas y pedidos por tienda y canal, exportable a Excel o PDF.
+    HU18: generación de reporte de pruebas de usabilidad en PDF. */
 export default function Reportes() {
   const [filtros, setFiltros] = useState({ desde: hoyIso(-29), hasta: hoyIso(), tienda: "" });
   const { datos, error, cargando } = useCarga<PanelReportes>(conFiltros("/reportes/panel/", filtros));
   const { datos: tiendas } = useCarga<Paginado<Tienda>>("/tiendas/tiendas/?page_size=100");
-  const [exportando, setExportando] = useState<"" | "xlsx" | "pdf">("");
+  const [exportando, setExportando] = useState<"" | "xlsx" | "pdf" | "usabilidad">("");
   const [errorExportar, setErrorExportar] = useState("");
+  const [mostrarUsabilidad, setMostrarUsabilidad] = useState(false);
+  const [datosUsabilidad, setDatosUsabilidad] = useState<PruebaUsabilidad[] | null>(null);
 
   const filtrar = (cambios: Partial<typeof filtros>) => setFiltros({ ...filtros, ...cambios });
   const periodoActivo = PERIODOS.find((p) => filtros.hasta === hoyIso() && filtros.desde === hoyIso(1 - p.dias));
@@ -88,6 +104,68 @@ export default function Reportes() {
     } finally {
       setExportando("");
     }
+  }
+
+  async function generarReporteUsabilidad() {
+    setExportando("usabilidad");
+    setErrorExportar("");
+    try {
+      const respuesta = await api("/reportes/usabilidad/", {
+        method: "POST",
+        body: JSON.stringify(datosUsabilidad),
+        headers: { "Content-Type": "application/json" }
+      });
+      const blob = await respuesta.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "reporte-usabilidad-mass.pdf";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (e) {
+      setErrorExportar(e instanceof ErrorApi ? e.message : "No se pudo generar el reporte de usabilidad.");
+    } finally {
+      setExportando("");
+    }
+  }
+
+  function agregarPruebaUsabilidad() {
+    setDatosUsabilidad((prev) => [...(prev || []), {
+      usuario: "",
+      rol: "admin",
+      tareas: []
+    }]);
+  }
+
+  function actualizarPrueba(index: number, campo: string, valor: string) {
+    setDatosUsabilidad((prev) => {
+      const nuevo = [...(prev || [])];
+      nuevo[index] = { ...nuevo[index], [campo]: valor };
+      return nuevo;
+    });
+  }
+
+  function agregarTarea(pruebaIndex: number) {
+    setDatosUsabilidad((prev) => {
+      const nuevo = [...(prev || [])];
+      nuevo[pruebaIndex].tareas.push({
+        tarea: "",
+        tiempo_segundos: 0,
+        completada: false,
+        observaciones: ""
+      });
+      return nuevo;
+    });
+  }
+
+  function actualizarTarea(pruebaIndex: number, tareaIndex: number, campo: string, valor: string | number | boolean) {
+    setDatosUsabilidad((prev) => {
+      const nuevo = [...(prev || [])];
+      nuevo[pruebaIndex].tareas[tareaIndex] = { ...nuevo[pruebaIndex].tareas[tareaIndex], [campo]: valor };
+      return nuevo;
+    });
   }
 
   const r = datos?.resumen;
@@ -108,6 +186,9 @@ export default function Reportes() {
           <button type="button" className="boton secundario" disabled={!!exportando} onClick={() => exportar("pdf")}>
             {exportando === "pdf" ? "Generando…" : "Exportar PDF"}
           </button>
+          <button type="button" className="boton secundario" disabled={!!exportando} onClick={() => setMostrarUsabilidad(!mostrarUsabilidad)}>
+            {mostrarUsabilidad ? "Ocultar usabilidad" : "Reporte usabilidad"}
+          </button>
         </div>
       </div>
 
@@ -116,7 +197,7 @@ export default function Reportes() {
         <Campo etiqueta="Hasta" type="date" value={filtros.hasta} min={filtros.desde} max={hoyIso()} onChange={(e) => e.target.value && filtrar({ hasta: e.target.value })} />
         <Seleccion etiqueta="Tienda" value={filtros.tienda} onChange={(e) => filtrar({ tienda: e.target.value })}>
           <option value="">Todas las tiendas</option>
-          {tiendas?.results.map((t) => (
+          {tiendas?.results?.map((t) => (
             <option key={t.id} value={t.id}>
               {t.codigo} · {t.nombre}
             </option>
@@ -275,6 +356,95 @@ export default function Reportes() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {mostrarUsabilidad && (
+        <div className="tarjeta tarjeta-usabilidad">
+          <div className="barra-titulo">
+            <div>
+              <h2>Reporte de Pruebas de Usabilidad (HU18)</h2>
+              <p className="subtitulo">Ingresa los datos de las pruebas de usabilidad para generar el reporte PDF.</p>
+            </div>
+            <div className="acciones-exportar">
+              <button type="button" className="boton" disabled={!!exportando || !datosUsabilidad?.length} onClick={agregarPruebaUsabilidad}>
+                Agregar prueba
+              </button>
+              <button type="button" className="boton secundario" disabled={!!exportando || !datosUsabilidad?.length} onClick={generarReporteUsabilidad}>
+                {exportando === "usabilidad" ? "Generando…" : "Generar PDF"}
+              </button>
+            </div>
+          </div>
+
+          {errorExportar && <p className="alerta" role="alert">{errorExportar}</p>}
+
+          {!datosUsabilidad?.length ? (
+            <p className="estado">No hay pruebas de usabilidad registradas. Agrega una prueba para comenzar.</p>
+          ) : (
+            <div className="pruebas-usabilidad">
+              {datosUsabilidad.map((prueba: any, pruebaIndex: number) => (
+                <div key={pruebaIndex} className="tarjeta-prueba">
+                  <div className="fila-prueba">
+                    <Campo
+                      etiqueta="Usuario"
+                      value={prueba.usuario}
+                      onChange={(e) => actualizarPrueba(pruebaIndex, "usuario", e.target.value)}
+                    />
+                    <Seleccion
+                      etiqueta="Rol"
+                      value={prueba.rol}
+                      onChange={(e) => actualizarPrueba(pruebaIndex, "rol", e.target.value)}
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="vendedor">Vendedor</option>
+                      <option value="cliente">Cliente</option>
+                    </Seleccion>
+                  </div>
+
+                  <div className="seccion-tareas">
+                    <div className="cabecera-tareas">
+                      <h3>Tareas</h3>
+                      <button type="button" className="boton secundario" onClick={() => agregarTarea(pruebaIndex)}>
+                        Agregar tarea
+                      </button>
+                    </div>
+
+                    {prueba.tareas.map((tarea: any, tareaIndex: number) => (
+                      <div key={tareaIndex} className="tarea-item">
+                        <div className="fila-tarea">
+                          <Campo
+                            etiqueta="Tarea"
+                            value={tarea.tarea}
+                            onChange={(e) => actualizarTarea(pruebaIndex, tareaIndex, "tarea", e.target.value)}
+                          />
+                          <Campo
+                            etiqueta="Tiempo (s)"
+                            type="number"
+                            min="0"
+                            value={tarea.tiempo_segundos}
+                            onChange={(e) => actualizarTarea(pruebaIndex, tareaIndex, "tiempo_segundos", parseInt(e.target.value) || 0)}
+                          />
+                          <label className="checkbox-tarea">
+                            <input
+                              type="checkbox"
+                              checked={tarea.completada}
+                              onChange={(e) => actualizarTarea(pruebaIndex, tareaIndex, "completada", e.target.checked)}
+                            />
+                            Completada
+                          </label>
+                        </div>
+                        <Campo
+                          etiqueta="Observaciones"
+                          value={tarea.observaciones || ""}
+                          onChange={(e) => actualizarTarea(pruebaIndex, tareaIndex, "observaciones", e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </section>

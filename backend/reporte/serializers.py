@@ -32,3 +32,16 @@ class ExportarSerializer(FiltrosReporteSerializer):
 
     def validate(self, datos):
         return {"filtros": super().validate(datos), "formato": datos["formato"]}
+
+
+class TareaUsabilidadSerializer(serializers.Serializer):
+    tarea = serializers.CharField(max_length=200)
+    tiempo_segundos = serializers.IntegerField(min_value=0)
+    completada = serializers.BooleanField()
+    observaciones = serializers.CharField(required=False, allow_blank=True)
+
+
+class PruebaUsabilidadSerializer(serializers.Serializer):
+    usuario = serializers.CharField(max_length=100)
+    rol = serializers.ChoiceField(choices=[("admin", "Admin"), ("vendedor", "Vendedor"), ("cliente", "Cliente")])
+    tareas = TareaUsabilidadSerializer(many=True)

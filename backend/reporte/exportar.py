@@ -1,6 +1,9 @@
-"""HU17: exporta el panel de reportes a Excel (openpyxl) o PDF (ReportLab) con los filtros aplicados."""
+"""HU17: exporta el panel de reportes a Excel (openpyxl) o PDF (ReportLab) con los filtros aplicados.
+HU18: generación de reporte de pruebas de usabilidad en PDF.
+"""
 
 from io import BytesIO
+from collections import defaultdict
 
 from django.utils import timezone
 from openpyxl import Workbook
@@ -143,5 +146,135 @@ def a_pdf(datos):
             *[("ALIGN", (j, 1), (j, -1), "RIGHT") for j in soles],
         ]))
         contenido += [Spacer(1, 0.5 * cm), Paragraph(titulo, estilos["Heading2"]), tabla]
+    doc.build(contenido)
+    return salida.getvalue()
+
+
+def pdf_usabilidad(datos_pruebas):
+    """HU18: genera PDF con gráficos de tiempo por tarea para pruebas de usabilidad."""
+    salida = BytesIO()
+    doc = SimpleDocTemplate(
+        salida, pagesize=A4, leftMargin=1.5 * cm, rightMargin=1.5 * cm, topMargin=1.5 * cm, bottomMargin=1.5 * cm,
+        title="Reporte de Pruebas de Usabilidad - Mass",
+    )
+    estilos = getSampleStyleSheet()
+    azul = colors.HexColor(f"#{AZUL}")
+    verde = colors.HexColor("#1E7B34")
+    amarillo = colors.HexColor("#FFD101")
+
+    # Agrupar datos por rol y tarea
+    por_rol = defaultdict(list)
+    por_tarea = defaultdict(list)
+    tareas_completadas = defaultdict(int)
+    tareas_totales = defaultdict(int)
+
+    for prueba in datos_pruebas:
+        rol = prueba["rol"]
+        for tarea in prueba["tareas"]:
+            por_rol[rol].append(tarea["tiempo_segundos"])
+            por_tarea[tarea["tarea"]].append(tarea["tiempo_segundos"])
+            tareas_totales[tarea["tarea"]] += 1
+            if tarea["completada"]:
+                tareas_completadas[tarea["tarea"]] += 1
+
+    # Calcular promedios
+    promedio_por_rol = {rol: sum(tiempos) / len(tiempos) if tiempos else 0 for rol, tiempos in por_rol.items()}
+    promedio_por_tarea = {tarea: sum(tiempos) / len(tiempos) if tiempos else 0 for tarea, tiempos in por_tarea.items()}
+
+    # Calcular tasa de completación
+    tasa_completacion = {
+        tarea: (tareas_completadas[tarea] / tareas_totales[tarea] * 100) if tareas_totales[tarea] > 0 else 0
+        for tarea in tareas_totales
+    }
+
+    contenido = [
+        Paragraph("Mass · Reporte de Pruebas de Usabilidad", estilos["Title"]),
+        Paragraph(f"Generado el {timezone.localtime():%d/%m/%Y %H:%M}.", estilos["Normal"]),
+        Spacer(1, 0.5 * cm),
+    ]
+
+    # Gráfico 1: Tiempo promedio por rol
+    contenido.append(Paragraph("Tiempo promedio por rol (segundos)", estilos["Heading2"]))
+    filas_rol = [["Rol", "Tiempo promedio (s)"]]
+    colores_rol = {"admin": azul, "vendedor": verde, "cliente": amarillo}
+    for rol in ["admin", "vendedor", "cliente"]:
+        filas_rol.append([rol.capitalize(), f"{promedio_por_rol[rol]:.1f}"])
+    tabla_rol = Table(filas_rol, repeatRows=1, colWidths=[5 * cm, 5 * cm])
+    tabla_rol.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), azul),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F6FA")]),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#D3D7E6")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (1, 1), (1, -1), "RIGHT"),
+    ]))
+    contenido.extend([tabla_rol, Spacer(1, 0.5 * cm)])
+
+    # Gráfico 2: Tiempo promedio por tarea
+    contenido.append(Paragraph("Tiempo promedio por tarea (segundos)", estilos["Heading2"]))
+    filas_tarea = [["Tarea", "Tiempo promedio (s)"]]
+    for tarea, tiempo in sorted(promedio_por_tarea.items(), key=lambda x: x[1], reverse=True):
+        filas_tarea.append([tarea[:50], f"{tiempo:.1f}"])
+    tabla_tarea = Table(filas_tarea, repeatRows=1, colWidths=[10 * cm, 5 * cm])
+    tabla_tarea.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), azul),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F6FA")]),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#D3D7E6")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (1, 1), (1, -1), "RIGHT"),
+    ]))
+    contenido.extend([tabla_tarea, Spacer(1, 0.5 * cm)])
+
+    # Gráfico 3: Tasa de completación por tarea
+    contenido.append(Paragraph("Tasa de completación por tarea (%)", estilos["Heading2"]))
+    filas_completacion = [["Tarea", "Completadas", "Tasa"]]
+    for tarea, tasa in sorted(tasa_completacion.items(), key=lambda x: x[1], reverse=True):
+        filas_completacion.append([
+            tarea[:50],
+            f"{tareas_completadas[tarea]}/{tareas_totales[tarea]}",
+            f"{tasa:.1f}%"
+        ])
+    tabla_completacion = Table(filas_completacion, repeatRows=1, colWidths=[8 * cm, 3 * cm, 3 * cm])
+    tabla_completacion.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), azul),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F6FA")]),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#D3D7E6")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (1, 1), (2, -1), "RIGHT"),
+    ]))
+    contenido.extend([tabla_completacion, Spacer(1, 0.5 * cm)])
+
+    # Tabla detallada por usuario
+    contenido.append(Paragraph("Detalle por usuario", estilos["Heading2"]))
+    filas_detalle = [["Usuario", "Rol", "Tarea", "Tiempo (s)", "Completada"]]
+    for prueba in datos_pruebas:
+        for tarea in prueba["tareas"]:
+            filas_detalle.append([
+                prueba["usuario"],
+                prueba["rol"],
+                tarea["tarea"][:40],
+                str(tarea["tiempo_segundos"]),
+                "Sí" if tarea["completada"] else "No"
+            ])
+    tabla_detalle = Table(filas_detalle, repeatRows=1, colWidths=[3 * cm, 2 * cm, 6 * cm, 2 * cm, 2 * cm])
+    tabla_detalle.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), azul),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F6FA")]),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#D3D7E6")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    contenido.append(tabla_detalle)
+
     doc.build(contenido)
     return salida.getvalue()
