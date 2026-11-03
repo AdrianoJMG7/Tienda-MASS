@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { api, conFiltros, descargar, ErrorApi } from "../../api";
+import { api, conFiltros, descargar, ErrorApi, leerTokens } from "../../api";
 import Campo from "../../componentes/Campo";
 import Seleccion from "../../componentes/Seleccion";
 import { formatoFecha, hoyIso, soles } from "../../formato";
@@ -110,11 +110,21 @@ export default function Reportes() {
     setExportando("usabilidad");
     setErrorExportar("");
     try {
-      const respuesta = await api("/reportes/usabilidad/", {
+      const tokens = leerTokens();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (tokens) headers["Authorization"] = `Bearer ${tokens.access}`;
+
+      const respuesta = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/reportes/usabilidad/`, {
         method: "POST",
+        headers,
         body: JSON.stringify(datosUsabilidad),
-        headers: { "Content-Type": "application/json" }
       });
+
+      if (!respuesta.ok) {
+        const texto = await respuesta.text();
+        throw new ErrorApi(respuesta.status, texto || "No se pudo generar el reporte de usabilidad.");
+      }
+
       const blob = await respuesta.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
