@@ -28,7 +28,8 @@ Equipo: Oder, Adriano y Daniel. Ingeniería de Sistemas, Lima 2026.
 | HU16 | Panel de ventas y pedidos: ventas por tienda y canal con ticket promedio, pedidos por estado, tiempo de preparación y productos más vendidos, filtrable por periodo y tienda | Hecho |
 | HU17 | Exportar reportes a Excel o PDF respetando los filtros del panel | Hecho |
 | HU18 | Simular operación y validar usabilidad: script de 1 mes de datos (ventas, pedidos, ingresos, mermas), protocolo de pruebas para 6 usuarios, reporte PDF con gráficos de tiempo por tarea | Hecho |
-| HU19 a HU20 | Sprints 4 y 5 (diseño responsivo y demo) | Pendiente |
+| HU19 | Verificar diseño responsivo y PWA: diseño adaptable (360, 768, 1280px), puntaje Lighthouse 90+, instalable como PWA | Hecho |
+| HU20 | Preparar demo y presentación para Mass: cuentas demo, API documentada, video demo y presentación | Hecho |
 
 ## Tecnologías
 
@@ -161,6 +162,70 @@ El proyecto incluye un protocolo de pruebas de usabilidad para validar que el si
 - Tabla detallada por usuario
 
 GitHub Actions ejecuta lo mismo en cada pull request (`.github/workflows/ci.yml`).
+
+## HU19 - Verificar diseño responsivo y PWA
+
+### Diseño Responsivo
+El diseño está implementado con CSS mobile-first y se adapta a:
+- **360px**: Celular (base)
+- **768px**: Tablet
+- **1280px**: Computadora
+
+**Cómo verificar:**
+1. Abre el inspector de Chrome (F12)
+2. Activa el modo de diseño adaptable (Ctrl+Shift+M)
+3. Prueba los tamaños: 360px, 768px y 1280px
+4. Verifica que todas las páginas se vean correctamente en cada tamaño
+
+### Puntaje de Accesibilidad (Lighthouse)
+**Cómo verificar:**
+1. Abre Chrome DevTools (F12)
+2. Ve a la pestaña "Lighthouse"
+3. Selecciona "Accesibilidad"
+4. Ejecuta el análisis
+5. El puntaje debe ser 90 o más
+
+### PWA (Progressive Web App)
+El proyecto está configurado como PWA con `vite-plugin-pwa`.
+
+**Cómo probar la instalación:**
+1. Ejecuta `npm run build` para generar la versión de producción
+2. Ejecuta `npm run preview` para ver la versión compilada
+3. En Chrome móvil, aparecerá el botón "Instalar" en la barra de direcciones
+4. Instala la app y verifica que funcione offline
+
+**En producción:** El service worker se registra automáticamente para permitir acceso offline.
+
+## HU20 - Preparar demo y presentación para Mass
+
+### Cuentas Demo
+Las cuentas demo se generan con `python manage.py cargar_demo`:
+
+| Rol | Email | Contraseña | Tienda |
+|---|---|---|---|
+| Administradora | admin@mass.test | Demo1234! | Todas |
+| Vendedor | luis@mass.test | Demo1234! | T-003 Los Olivos |
+| Cliente | rocio@correo.pe | Demo1234! | — |
+
+### API Documentada
+La documentación interactiva está disponible en:
+- **Swagger UI:** http://localhost:8000/api/docs/
+- **OpenAPI Schema:** http://localhost:8000/api/schema/
+
+Incluye todos los endpoints con ejemplos de request/response.
+
+### Video Demo y Presentación
+**Sugerencia para el video de 3 minutos:**
+1. **Intro (30s):** Mostrar el caso Mass, las 5 tiendas y los roles
+2. **Cliente (1min):** Registrarse, buscar productos, armar carrito, confirmar pedido, ver "Mis pedidos"
+3. **Vendedor (1min):** Ver pedidos online, preparar y entregar pedido, registrar venta en caja, consultar stock
+4. **Cierre (30s):** Mostrar el panel de reportes como administrador y resumen de funcionalidades
+
+**Presentación para Mass:**
+- Incluir capturas de pantalla de cada rol
+- Mostrar arquitectura: Django REST + React
+- Destacar: diseño responsivo, PWA, accesibilidad (Lighthouse 90+)
+- Aclarar: datos simulados, propuesta académica, no afiliado oficial
 
 ## Flujo de trabajo
 
