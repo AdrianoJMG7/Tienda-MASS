@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { api, conFiltros, descargar, ErrorApi, leerTokens } from "../../api";
+import { conFiltros, descargar, ErrorApi, leerTokens } from "../../api";
 import Campo from "../../componentes/Campo";
 import Seleccion from "../../componentes/Seleccion";
 import { formatoFecha, hoyIso, soles } from "../../formato";
