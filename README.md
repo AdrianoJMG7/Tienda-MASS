@@ -75,6 +75,7 @@ python manage.py migrate
 python manage.py cargar_demo     # 5 tiendas, cuentas demo, 800 productos y su stock
 python manage.py simular_ventas  # 30 días de ventas, pedidos, ingresos y mermas para los reportes (opcional: --dias 90)
 python manage.py runserver
+python manage.py simular_ventas --dias 30
 ```
 
 **Frontend** (en `frontend/`, en otra terminal):
