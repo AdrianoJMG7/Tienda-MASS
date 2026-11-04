@@ -15,3 +15,9 @@ export function hoyIso(diasExtra = 0) {
   d.setDate(d.getDate() + diasExtra);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+
+/** IGV (18 %) que ya está incluido en un precio al público; solo es referencial. */
+export const igvIncluido = (total: number) => Math.round((total - total / 1.18) * 100) / 100;
+
+/** Descuento de una oferta en porcentaje entero (0 si no hay oferta). */
+export const descuento = (precio: number, oferta: number | null) => (oferta != null ? Math.round((1 - oferta / precio) * 100) : 0);

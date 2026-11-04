@@ -1,173 +1,130 @@
 import { useState } from "react";
-import { api, conFiltros } from "../../api";
-import { useSesion } from "../../auth";
-import Campo from "../../componentes/Campo";
-import Dialogo from "../../componentes/Dialogo";
-import type { Paginado, Pedido } from "../../tipos";
-import { useCarga } from "../../useCarga";
+import { Link } from "react-router";
+import { conFiltros } from "../../api";
+import Icono from "../../componentes/Icono";
+import Paginacion from "../../componentes/Paginacion";
+import { soles } from "../../formato";
+import type { EstadoPedido, Paginado, Pedido } from "../../tipos";
+import { useCarga, useRetraso } from "../../useCarga";
 
-/** HU11: historial de pedidos del cliente con estado y opción de cancelar. */
+const POR_PAGINA = 10;
+
+const FILTROS: { texto: string; estado: string }[] = [
+  { texto: "Todos", estado: "" },
+  { texto: "Pendiente de recojo", estado: "recibido,en_preparacion,listo" },
+  { texto: "Recogido", estado: "entregado" },
+  { texto: "Cancelado", estado: "cancelado" },
+];
+
+const ESTADO: Record<EstadoPedido, { texto: string; icono: "reloj" | "check" | "cerrar"; clase: string }> = {
+  recibido: { texto: "Pendiente de recojo", icono: "reloj", clase: "pendiente" },
+  en_preparacion: { texto: "En preparación", icono: "reloj", clase: "pendiente" },
+  listo: { texto: "Listo para recoger", icono: "check", clase: "listo" },
+  entregado: { texto: "Recogido", icono: "check", clase: "recogido" },
+  cancelado: { texto: "Cancelado", icono: "cerrar", clase: "cancelado" },
+};
+
+const fecha = new Intl.DateTimeFormat("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+/** HU11: historial de pedidos del cliente con su estado; el detalle permite cancelar. */
 export default function MisPedidos() {
-  const { usuario } = useSesion();
-  const [filtroEstado, setFiltroEstado] = useState("");
-  const [cancelando, setCancelando] = useState<Pedido | null>(null);
-  const [motivo, setMotivo] = useState("");
-  const [mensaje, setMensaje] = useState("");
-  const [cargando, setCargando] = useState(false);
-
-  const { datos, recargar } = useCarga<Paginado<Pedido>>(
-    usuario ? conFiltros("/pedidos/pedidos/", { estado: filtroEstado }) : null
+  const [texto, setTexto] = useState("");
+  const [estado, setEstado] = useState("");
+  const [pagina, setPagina] = useState(1);
+  const q = useRetraso(texto.trim());
+  const { datos, error, cargando } = useCarga<Paginado<Pedido>>(
+    conFiltros("/pedidos/pedidos/", { q, estado, page: pagina, page_size: POR_PAGINA }),
   );
 
-  async function cancelarPedido() {
-    if (!cancelando || !motivo.trim()) return;
-    setCargando(true);
-    setMensaje("");
-    try {
-      await api(`/pedidos/pedidos/${cancelando.id}/cancelar/`, { method: "POST", body: JSON.stringify({ motivo }) });
-      setMensaje("Pedido cancelado correctamente.");
-      setCancelando(null);
-      setMotivo("");
-      recargar();
-    } catch (error: any) {
-      setMensaje(error.mensaje || "No se pudo cancelar el pedido.");
-    } finally {
-      setCargando(false);
-    }
-  }
-
-  function puedeCancelar(pedido: Pedido) {
-    return pedido.estado === "recibido" || pedido.estado === "en_preparacion";
-  }
-
   return (
-    <section>
-      <div className="barra-titulo">
-        <div>
-          <h1>Mis pedidos</h1>
-          <p className="subtitulo">Historial de tus pedidos online para recoger en tienda.</p>
-        </div>
+    <section className="mis-pedidos">
+      <h1>Mis pedidos</h1>
+      <p className="subtitulo">Consulta el estado y los detalles de tus compras.</p>
+
+      <div className="buscador buscador-pagina">
+        <Icono nombre="buscar" />
+        <label htmlFor="buscar-pedido" className="solo-lector">
+          Buscar por código de pedido
+        </label>
+        <input
+          id="buscar-pedido"
+          type="search"
+          placeholder="Buscar por código de pedido…"
+          value={texto}
+          onChange={(e) => {
+            setTexto(e.target.value);
+            setPagina(1);
+          }}
+        />
       </div>
 
-      <div className="filtros">
-        <div className="campo">
-          <label>Estado</label>
-          <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
-            <option value="">Todos</option>
-            <option value="recibido">Recibidos</option>
-            <option value="en_preparacion">En preparación</option>
-            <option value="listo">Listos para recoger</option>
-            <option value="entregado">Entregados</option>
-            <option value="cancelado">Cancelados</option>
-          </select>
-        </div>
+      <div className="chips" role="group" aria-label="Filtrar por estado">
+        {FILTROS.map((f) => (
+          <button
+            key={f.texto}
+            type="button"
+            className={`chip${estado === f.estado ? " activo" : ""}`}
+            aria-pressed={estado === f.estado}
+            onClick={() => {
+              setEstado(f.estado);
+              setPagina(1);
+            }}
+          >
+            {f.texto}
+          </button>
+        ))}
       </div>
 
-      {mensaje && <p className={mensaje.includes("cancelado") ? "exito" : "alerta"} role="alert">{mensaje}</p>}
-
+      {error && <p className="alerta" role="alert">{error}</p>}
       {!datos ? (
         <p className="estado">Cargando pedidos…</p>
       ) : datos.results.length === 0 ? (
-        <p className="estado">No tienes pedidos aún.</p>
-      ) : (
-        <div className="lista-pedidos">
-          {datos.results.map((pedido) => (
-            <article key={pedido.id} className="tarjeta-pedido">
-              <div className="pedido-cabecera">
-                <div>
-                  <h3>Pedido #{pedido.id}</h3>
-                  <p className="fecha">{new Date(pedido.creado).toLocaleDateString("es-PE", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  })}</p>
-                </div>
-                <span className={`estado estado-${pedido.estado}`}>
-                  {pedido.estado_display}
-                </span>
-              </div>
-
-              <div className="pedido-tienda">
-                <strong>Tienda:</strong> {pedido.tienda.nombre} ({pedido.tienda.codigo})
-                <br />
-                <small>{pedido.tienda.direccion}</small>
-              </div>
-
-              <div className="pedido-detalles">
-                <h4>Productos</h4>
-                <ul>
-                  {pedido.detalles.map((detalle) => (
-                    <li key={detalle.producto}>
-                      {detalle.cantidad}x {detalle.nombre} - S/ {detalle.subtotal.toFixed(2)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="pedido-total">
-                <strong>Total: S/ {pedido.total.toFixed(2)}</strong>
-                <br />
-                <small>Pago: {pedido.medio_pago_display}</small>
-              </div>
-
-              {pedido.codigo_recojo && (
-                <div className="pedido-codigo">
-                  <strong>Código de recojo:</strong> <code>{pedido.codigo_recojo}</code>
-                </div>
-              )}
-
-              {puedeCancelar(pedido) && (
-                <button
-                  type="button"
-                  className="boton secundario"
-                  onClick={() => setCancelando(pedido)}
-                >
-                  Cancelar pedido
-                </button>
-              )}
-
-              {pedido.estado === "cancelado" && pedido.motivo_cancelacion && (
-                <p className="motivo-cancelacion">
-                  <strong>Motivo de cancelación:</strong> {pedido.motivo_cancelacion}
-                </p>
-              )}
-            </article>
-          ))}
+        <div className="tarjeta vacio">
+          <Icono nombre="caja" tamano={44} />
+          <p>{q || estado ? "No hay pedidos con esos filtros." : "Aún no tienes pedidos."}</p>
+          {!q && !estado && (
+            <Link to="/catalogo" className="boton-primario">
+              Ir al catálogo
+            </Link>
+          )}
         </div>
+      ) : (
+        <ul className="lista-pedidos" aria-busy={cargando}>
+          {datos.results.map((p) => {
+            const e = ESTADO[p.estado];
+            return (
+              <li key={p.id} className="tarjeta tarjeta-pedido">
+                <div className="pedido-datos">
+                  <h2>{p.codigo_recojo}</h2>
+                  <p className="con-icono">
+                    <Icono nombre="calendario" tamano={18} /> Fecha de compra: {fecha.format(new Date(p.creado))}
+                  </p>
+                  <p className="con-icono">
+                    <Icono nombre="ubicacion" tamano={18} />
+                    <span>
+                      <strong className="texto-azul">{p.tienda.nombre}</strong>
+                      <small className="dato-secundario">
+                        {p.tienda.direccion}, {p.tienda.distrito}
+                      </small>
+                    </span>
+                  </p>
+                </div>
+                <p className="pedido-total">
+                  <small>Total</small>
+                  <strong>{soles(p.total)}</strong>
+                </p>
+                <span className={`estado-pedido ${e.clase}`}>
+                  <Icono nombre={e.icono} tamano={18} /> {e.texto}
+                </span>
+                <Link to={`/pedido/${p.id}`} className="boton-contorno">
+                  <Icono nombre="ojo" /> Ver detalle<span className="solo-lector"> del pedido {p.codigo_recojo}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       )}
-
-      {cancelando && (
-        <Dialogo titulo="Cancelar pedido" abierto={!!cancelando} alCerrar={() => { setCancelando(null); setMotivo(""); setMensaje(""); }}>
-          <p>¿Estás seguro de que quieres cancelar este pedido? Esta acción liberará el stock reservado.</p>
-          <Campo
-            etiqueta="Motivo de cancelación"
-            required
-            value={motivo}
-            onChange={(e) => setMotivo(e.target.value)}
-            placeholder="Ej: Ya no necesito los productos"
-          />
-          {mensaje && <p className="alerta">{mensaje}</p>}
-          <div className="acciones-dialogo">
-            <button
-              type="button"
-              className="boton secundario"
-              onClick={() => { setCancelando(null); setMotivo(""); setMensaje(""); }}
-            >
-              No cancelar
-            </button>
-            <button
-              type="button"
-              className="boton peligro"
-              onClick={cancelarPedido}
-              disabled={!motivo.trim() || cargando}
-            >
-              {cargando ? "Cancelando…" : "Sí, cancelar pedido"}
-            </button>
-          </div>
-        </Dialogo>
-      )}
+      <Paginacion pagina={pagina} total={datos?.count ?? 0} porPagina={POR_PAGINA} alCambiar={setPagina} />
     </section>
   );
 }

@@ -14,7 +14,7 @@ import { conFiltros, descargar, ErrorApi, leerTokens } from "../../api";
 import Campo from "../../componentes/Campo";
 import Seleccion from "../../componentes/Seleccion";
 import { formatoFecha, hoyIso, soles } from "../../formato";
-import type { Paginado, PanelReportes, Tienda } from "../../tipos";
+import type { PanelReportes, Tienda } from "../../tipos";
 import { useCarga } from "../../useCarga";
 
 interface TareaUsabilidad {
@@ -85,7 +85,7 @@ function TooltipSoles({ active, payload, label, formatoEtiqueta }: {
 export default function Reportes() {
   const [filtros, setFiltros] = useState({ desde: hoyIso(-29), hasta: hoyIso(), tienda: "" });
   const { datos, error, cargando } = useCarga<PanelReportes>(conFiltros("/reportes/panel/", filtros));
-  const { datos: tiendas } = useCarga<Paginado<Tienda>>("/tiendas/tiendas/?page_size=100");
+  const { datos: tiendas } = useCarga<Tienda[]>("/tiendas/tiendas/");
   const [exportando, setExportando] = useState<"" | "xlsx" | "pdf" | "usabilidad">("");
   const [errorExportar, setErrorExportar] = useState("");
   const [mostrarUsabilidad, setMostrarUsabilidad] = useState(false);
@@ -207,7 +207,7 @@ export default function Reportes() {
         <Campo etiqueta="Hasta" type="date" value={filtros.hasta} min={filtros.desde} max={hoyIso()} onChange={(e) => e.target.value && filtrar({ hasta: e.target.value })} />
         <Seleccion etiqueta="Tienda" value={filtros.tienda} onChange={(e) => filtrar({ tienda: e.target.value })}>
           <option value="">Todas las tiendas</option>
-          {tiendas?.results?.map((t) => (
+          {tiendas?.map((t) => (
             <option key={t.id} value={t.id}>
               {t.codigo} · {t.nombre}
             </option>

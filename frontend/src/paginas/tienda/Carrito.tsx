@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import { useSesion } from "../../auth";
 import { useCarrito, useCarritoActualizado, type LineaCarrito } from "../../carrito";
 import Cantidad from "../../componentes/Cantidad";
+import Dialogo from "../../componentes/Dialogo";
+import Disponibilidad from "../../componentes/Disponibilidad";
 import FotoProducto from "../../componentes/FotoProducto";
-import SelectorTienda from "../../componentes/SelectorTienda";
-import { soles } from "../../formato";
+import Icono from "../../componentes/Icono";
+import Recomendados from "../../componentes/Recomendados";
+import { igvIncluido, soles } from "../../formato";
 
 function AvisoStock({ linea, tienda }: { linea: LineaCarrito; tienda: string }) {
   const { cambiarCantidad, quitar } = useCarrito();
@@ -33,21 +37,27 @@ function AvisoStock({ linea, tienda }: { linea: LineaCarrito; tienda: string }) 
   );
 }
 
-/** HU07: armar el carrito y elegir la tienda de recojo. */
+/** HU07: armar el carrito y revisar la tienda de recojo. */
 export default function Carrito() {
   const { usuario } = useSesion();
-  const { tienda, unidades, cambiarCantidad, quitar, elegirTienda } = useCarrito();
-  const { lineas, tiendas, tiendaElegida, total, problemas, cargando, error } = useCarritoActualizado();
+  const { items, unidades, cambiarCantidad, quitar, vaciar } = useCarrito();
+  const { lineas, tiendaElegida, total, problemas, cargando, error } = useCarritoActualizado();
+  const [confirmarVaciar, setConfirmarVaciar] = useState(false);
+  const enCarrito = items.map((i) => i.producto);
 
   if (lineas.length === 0) {
     return (
-      <section className="tarjeta vacio">
-        <h1>Tu carrito está vacío</h1>
-        <p className="subtitulo">Revisa el catálogo y las ofertas de la semana.</p>
-        <Link to="/catalogo" className="boton">
-          Ir al catálogo
-        </Link>
-      </section>
+      <>
+        <section className="tarjeta vacio">
+          <Icono nombre="carrito" tamano={48} />
+          <h1>Tu carrito está vacío</h1>
+          <p className="subtitulo">Revisa el catálogo y las ofertas de la semana.</p>
+          <Link to="/catalogo" className="boton-primario">
+            Ir al catálogo
+          </Link>
+        </section>
+        <Recomendados filtros={{ en_oferta: true }} />
+      </>
     );
   }
 
@@ -57,20 +67,37 @@ export default function Carrito() {
   else if (problemas.length > 0) bloqueo = "Corrige los productos marcados para continuar.";
 
   return (
-    <section>
-      <h1>Mi carrito</h1>
+    <section className="pagina-carrito">
+      <Link to="/catalogo" className="enlace-flecha">
+        <Icono nombre="flechaIzq" tamano={18} /> Volver al catálogo
+      </Link>
+      <div className="titulo-con-icono">
+        <Icono nombre="carrito" tamano={40} />
+        <div>
+          <h1>Tu carrito</h1>
+          <p className="subtitulo">Revisa tus productos antes de continuar con tu compra.</p>
+        </div>
+      </div>
       {error && <p className="alerta" role="alert">{error}</p>}
+
       <div className="carrito">
         <div>
           <ul className="lineas-carrito" aria-busy={cargando}>
             {lineas.map((l) => (
-              <li key={l.producto} className={`linea-carrito${problemas.includes(l) ? " con-problema" : ""}`}>
-                <FotoProducto producto={l} tamano={64} />
+              <li key={l.producto} className={`tarjeta linea-carrito${problemas.includes(l) ? " con-problema" : ""}`}>
+                <Link to={`/producto/${l.producto}`} tabIndex={-1} aria-hidden="true">
+                  <FotoProducto producto={l} tamano={80} />
+                </Link>
                 <div className="linea-info">
-                  <strong>{l.nombre}</strong>
-                  <small className="dato-secundario">
-                    {l.marca} · {soles(l.precio)} c/u{l.precioOferta && <span className="insignia propia">Oferta</span>}
-                  </small>
+                  <Link to={`/producto/${l.producto}`} className="linea-nombre">
+                    {l.nombre}
+                  </Link>
+                  <small className="dato-secundario">{l.marca}</small>
+                  <Disponibilidad unidades={l.retirado ? null : l.disponible} />
+                  <strong className={l.precioOferta ? "precio-oferta" : undefined}>
+                    {soles(l.precio)}
+                    {l.precioOferta && <span className="insignia propia">Oferta</span>}
+                  </strong>
                   <AvisoStock linea={l} tienda={tiendaElegida?.nombre ?? ""} />
                 </div>
                 <div className="linea-acciones">
@@ -83,22 +110,46 @@ export default function Carrito() {
                     />
                   )}
                   <strong className="linea-subtotal">{soles(l.subtotal)}</strong>
-                  <button type="button" className="enlace peligro" onClick={() => quitar(l.producto)}>
-                    Quitar<span className="solo-lector"> {l.nombre}</span>
+                  <button type="button" className="boton-icono" aria-label={`Quitar ${l.nombre}`} onClick={() => quitar(l.producto)}>
+                    <Icono nombre="basura" />
                   </button>
                 </div>
               </li>
             ))}
           </ul>
-          <Link to="/catalogo">← Seguir comprando</Link>
+
+          <div className="banda-recojo">
+            <Icono nombre="tienda" tamano={26} />
+            <span>
+              {tiendaElegida ? (
+                <>
+                  <span className="banda-texto">
+                    Recoges en <strong>{tiendaElegida.nombre}</strong>, sin costo adicional.
+                  </span>
+                  <small>
+                    {tiendaElegida.direccion}, {tiendaElegida.distrito}
+                  </small>
+                </>
+              ) : (
+                <>Recoge tus productos en la tienda que elijas, sin costo adicional.</>
+              )}
+            </span>
+            <Link to="/tiendas" state={{ desde: "/carrito" }} className="enlace-flecha">
+              {tiendaElegida ? "Cambiar tienda" : "Elegir tienda"}
+            </Link>
+          </div>
         </div>
 
         <aside className="tarjeta resumen">
-          <SelectorTienda tiendas={tiendas} elegida={tiendaElegida ? tienda : null} alElegir={elegirTienda} />
+          <h2>Resumen de tu compra</h2>
           <dl className="totales">
             <div>
-              <dt>Productos</dt>
-              <dd>{unidades}</dd>
+              <dt>Subtotal ({unidades} productos)</dt>
+              <dd>{soles(total)}</dd>
+            </div>
+            <div className="igv">
+              <dt>IGV (18 %) incluido</dt>
+              <dd>{soles(igvIncluido(total))}</dd>
             </div>
             <div className="total">
               <dt>Total</dt>
@@ -111,17 +162,26 @@ export default function Carrito() {
             <p className="nota">Las cuentas del personal de tienda no pueden hacer pedidos.</p>
           ) : (
             <>
-              {bloqueo && <p className="aviso-linea">{bloqueo}</p>}
+              {bloqueo && (
+                <p className="aviso-linea">
+                  {bloqueo}{" "}
+                  {!tiendaElegida && (
+                    <Link to="/tiendas" state={{ desde: "/carrito" }}>
+                      Elegir tienda
+                    </Link>
+                  )}
+                </p>
+              )}
               {bloqueo || cargando ? (
-                <button type="button" className="boton ancho" disabled>
-                  {usuario ? "Continuar" : "Ingresar para confirmar"}
+                <button type="button" className="boton-primario ancho" disabled>
+                  <Icono nombre="bolsa" /> Continuar con la compra
                 </button>
               ) : usuario ? (
-                <Link to="/confirmar" className="boton ancho">
-                  Continuar
+                <Link to="/confirmar" className="boton-primario ancho">
+                  <Icono nombre="bolsa" /> Continuar con la compra <Icono nombre="flechaDer" />
                 </Link>
               ) : (
-                <Link to="/ingresar" state={{ desde: "/confirmar" }} className="boton ancho">
+                <Link to="/ingresar" state={{ desde: "/confirmar" }} className="boton-primario ancho">
                   Ingresar para confirmar
                 </Link>
               )}
@@ -135,8 +195,35 @@ export default function Carrito() {
               )}
             </>
           )}
+          <p className="separador-o" aria-hidden="true">
+            <span>o</span>
+          </p>
+          <button type="button" className="boton-contorno ancho" onClick={() => setConfirmarVaciar(true)}>
+            <Icono nombre="basura" /> Vaciar carrito
+          </button>
         </aside>
       </div>
+
+      <Recomendados filtros={{ en_oferta: true }} excluir={enCarrito} puedeComprar={!esPersonal} />
+
+      <Dialogo titulo="Vaciar carrito" abierto={confirmarVaciar} alCerrar={() => setConfirmarVaciar(false)}>
+        <p>Se quitarán los {unidades} productos de tu carrito.</p>
+        <div className="acciones-dialogo">
+          <button type="button" className="boton secundario" onClick={() => setConfirmarVaciar(false)}>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="boton peligro"
+            onClick={() => {
+              vaciar();
+              setConfirmarVaciar(false);
+            }}
+          >
+            Sí, vaciar
+          </button>
+        </div>
+      </Dialogo>
     </section>
   );
 }
