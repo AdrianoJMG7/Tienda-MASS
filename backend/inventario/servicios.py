@@ -131,6 +131,23 @@ def registrar_ingreso(tienda, items, usuario=None, motivo="", fecha_vencimiento=
 
 
 @transaction.atomic
+def ajustar_stock(tienda, producto, nuevo_stock, motivo, usuario=None, fecha_vencimiento=None, stock_minimo=None):
+    """Lleva el stock de un producto a la cantidad contada; la diferencia queda como ingreso o merma."""
+    stock, _ = Stock.objects.select_for_update().get_or_create(tienda=tienda, producto=producto)
+    diferencia = nuevo_stock - stock.cantidad
+    stock.cantidad = nuevo_stock
+    if fecha_vencimiento is not None:
+        stock.fecha_vencimiento = fecha_vencimiento
+    if stock_minimo is not None:
+        stock.stock_minimo = stock_minimo
+    stock.save()
+    if diferencia:
+        tipo = Tipo.INGRESO if diferencia > 0 else Tipo.MERMA
+        _registrar(tienda, [(producto, abs(diferencia))], tipo, usuario, "", motivo)
+    return stock
+
+
+@transaction.atomic
 def registrar_merma(tienda, items, usuario=None, motivo=""):
     """HU15: registra merma de mercadería, disminuye el stock."""
     sin_stock = []

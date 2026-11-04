@@ -1,7 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
-from django.db.models import Case, Count, F, OuterRef, Q, Subquery, Value, When
+from django.db.models import Case, Count, F, OuterRef, Q, Subquery, Sum, Value, When
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -30,6 +30,17 @@ def _es_admin(usuario):
     return usuario.is_authenticated and usuario.rol == Rol.ADMIN
 
 
+def _con_stock_total(consulta, stock):
+    """Solo administrador: suma el stock de todas las tiendas y permite filtrar por él."""
+    suma = Stock.objects.filter(producto=OuterRef("pk")).order_by().values("producto").annotate(s=Sum("cantidad")).values("s")
+    consulta = consulta.annotate(stock_total=Coalesce(Subquery(suma), 0))
+    if stock == "con_stock":
+        return consulta.filter(stock_total__gt=0)
+    if stock == "sin_stock":
+        return consulta.filter(stock_total=0)
+    return consulta
+
+
 def _con_disponible(consulta, params):
     """HU06: con ?tienda= agrega `disponible` (unidades en esa tienda); con ?con_stock, solo los que hay."""
     if (tienda := params.get("tienda", "")).isdigit():
@@ -50,6 +61,7 @@ def _con_disponible(consulta, params):
         OpenApiParameter("precio_min", float),
         OpenApiParameter("precio_max", float),
         OpenApiParameter("estado", str, enum=["activos", "inactivos", "todos"], description="Solo administrador"),
+        OpenApiParameter("stock", str, enum=["con_stock", "sin_stock"], description="Solo administrador"),
         OpenApiParameter("orden", str, enum=["nombre", "relevancia", "precio", "-precio"]),
         OpenApiParameter("tienda", int, description="Agrega `disponible`: unidades en esa tienda"),
         OpenApiParameter("con_stock", bool, description="Con ?tienda: solo productos disponibles"),
@@ -73,11 +85,18 @@ class ProductoViewSet(viewsets.ModelViewSet):
         p = self.request.query_params
         consulta = Producto.objects.select_related("categoria").con_precio_vigente()
 
-        estado = p.get("estado", "activos") if _es_admin(self.request.user) else "activos"
+        es_admin = _es_admin(self.request.user)
+        estado = p.get("estado", "activos") if es_admin else "activos"
         if estado == "activos":
             consulta = consulta.filter(activo=True)
         elif estado == "inactivos":
             consulta = consulta.filter(activo=False)
+
+        if es_admin:
+            consulta = _con_stock_total(consulta, p.get("stock"))
+        else:
+            # Una categoría desactivada oculta sus productos de la tienda y de la caja.
+            consulta = consulta.filter(categoria__activa=True)
 
         if q := p.get("q", "").strip():
             consulta = consulta.filter(Q(nombre__icontains=q) | Q(marca__icontains=q) | Q(codigo_barras=q))
@@ -203,7 +222,7 @@ class FavoritoViewSet(viewsets.GenericViewSet):
     def get_queryset(self):
         guardado = Favorito.objects.filter(usuario=self.request.user, producto=OuterRef("pk")).values("creado")[:1]
         consulta = (
-            Producto.objects.filter(activo=True)
+            Producto.objects.filter(activo=True, categoria__activa=True)
             .select_related("categoria")
             .con_precio_vigente()
             .annotate(guardado=Subquery(guardado))
