@@ -1,6 +1,7 @@
 from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics, permissions, status, viewsets
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
@@ -11,6 +12,7 @@ from .models import Usuario
 from .serializers import (
     LoginSerializer,
     LogoutSerializer,
+    PerfilSerializer,
     RegistroSerializer,
     UsuarioSerializer,
 )
@@ -48,8 +50,12 @@ class LogoutView(APIView):
         return Response(status=status.HTTP_205_RESET_CONTENT)
 
 
-class YoView(generics.RetrieveAPIView):
-    serializer_class = UsuarioSerializer
+class YoView(generics.RetrieveUpdateAPIView):
+    """Datos del usuario con sesión; el cliente los actualiza desde "Mi cuenta" (PATCH)."""
+
+    serializer_class = PerfilSerializer
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    http_method_names = ["get", "patch", "head", "options"]
 
     def get_object(self):
         return self.request.user
