@@ -1609,9 +1609,10 @@ main:has(.catalogo, .detalle-producto, .pagina-carrito, .pagina-confirmar, .pedi
 }
 
 .avatar {
-  display: grid;
+  display: flex;
   flex: none;
-  place-items: center;
+  justify-content: center;
+  align-items: center;
   width: 56px;
   height: 56px;
   border-radius: 50%;
