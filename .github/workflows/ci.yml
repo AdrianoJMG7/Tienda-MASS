@@ -6,11 +6,35 @@ on:
     branches: [main, "sprint*"]
 
 jobs:
-  backend:
+  build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: neondb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DJANGO_SECRET_KEY: clave-solo-para-ci
+      DJANGO_DEBUG: "1"
+      DB_NAME: neondb
+      DB_USER: ci
+      DB_PASSWORD: ci
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_SCHEMA: public
+      DB_SSLMODE: disable
+      
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
