@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from choices import MedioPago
+
 
 class Rol(models.TextChoices):
     ADMIN = "admin", "Administrador"
@@ -51,6 +53,17 @@ class Usuario(AbstractUser):
         help_text="Solo para vendedores: tienda en la que trabaja.",
     )
     acepto_privacidad_en = models.DateTimeField(null=True, blank=True)
+    # Datos y preferencias del cliente ("Mi cuenta").
+    dni = models.CharField("DNI", max_length=8, blank=True)
+    fecha_nacimiento = models.DateField(null=True, blank=True)
+    foto = models.ImageField(upload_to="usuarios/", blank=True)
+    medio_pago_preferido = models.CharField(
+        max_length=10, choices=MedioPago.choices, blank=True, help_text="Se preselecciona al confirmar un pedido"
+    )
+    tienda_preferida = models.ForeignKey(
+        "tienda.Tienda", null=True, blank=True, on_delete=models.SET_NULL, related_name="+",
+        help_text="Tienda de recojo habitual del cliente",
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["nombre"]

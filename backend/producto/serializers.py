@@ -28,6 +28,7 @@ class ProductoSerializer(serializers.ModelSerializer):
             "id",
             "nombre",
             "marca",
+            "descripcion",
             "codigo_barras",
             "foto",
             "quitar_foto",
@@ -46,6 +47,7 @@ class ProductoSerializer(serializers.ModelSerializer):
             "costo": {"required": True, "min_value": Decimal("0")},
             "precio": {"min_value": Decimal("0.10")},
             "foto": {"required": False},
+            "descripcion": {"required": False},
         }
 
     def validate_codigo_barras(self, valor):

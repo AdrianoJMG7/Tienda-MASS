@@ -15,8 +15,8 @@ from .serializers import CancelarSerializer, CrearPedidoSerializer, EntregarSeri
 
 @extend_schema(
     parameters=[
-        OpenApiParameter("estado", str, enum=[e.value for e in EstadoPedido]),
-        OpenApiParameter("q", str, description="Número de pedido o nombre del cliente"),
+        OpenApiParameter("estado", str, description="Uno o varios estados separados por coma"),
+        OpenApiParameter("q", str, description="Número de pedido; el cliente busca por código de recojo y el personal por nombre del cliente"),
     ]
 )
 class PedidoViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -51,10 +51,17 @@ class PedidoViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.L
 
         if self.action == "list":
             p = self.request.query_params
-            if estado := p.get("estado"):
-                queryset = queryset.filter(estado=estado)
+            estado = p.get("estado", "")
+            # Varios estados separados por coma, p. ej. "Pendiente de recojo" = recibido,en_preparacion,listo.
+            if estados := [e for e in estado.split(",") if e]:
+                queryset = queryset.filter(estado__in=estados)
             if q := p.get("q", "").strip().lstrip("#"):
-                queryset = queryset.filter(id=q) if q.isdigit() else queryset.filter(cliente__nombre__icontains=q)
+                if q.isdigit():
+                    queryset = queryset.filter(id=q)
+                elif user.rol == Rol.CLIENTE:
+                    queryset = queryset.filter(codigo_recojo__icontains=q)  # el cliente busca por su código
+                else:
+                    queryset = queryset.filter(cliente__nombre__icontains=q)
             # Los pedidos activos se atienden por orden de llegada.
             if estado in (EstadoPedido.RECIBIDO, EstadoPedido.EN_PREPARACION, EstadoPedido.LISTO):
                 queryset = queryset.order_by("creado")

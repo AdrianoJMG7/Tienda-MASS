@@ -25,6 +25,7 @@ class Producto(models.Model):
 
     nombre = models.CharField(max_length=150)
     marca = models.CharField(max_length=60)
+    descripcion = models.TextField(blank=True)
     codigo_barras = models.CharField(max_length=14, unique=True)
     foto = models.ImageField(upload_to="productos/", blank=True)
     categoria = models.ForeignKey("categoria.Categoria", on_delete=models.PROTECT, related_name="productos")
@@ -80,3 +81,15 @@ class HistorialPrecio(models.Model):
 
     class Meta:
         ordering = ["-fecha", "-id"]
+
+
+class Favorito(models.Model):
+    """Producto que un cliente guardó en "Mis favoritos"."""
+
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="favoritos")
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name="favoritos")
+    creado = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-creado"]
+        constraints = [models.UniqueConstraint(fields=["usuario", "producto"], name="favorito_unico")]
