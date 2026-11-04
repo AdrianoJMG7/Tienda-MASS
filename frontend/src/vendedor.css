@@ -668,8 +668,9 @@ dialog.dialogo.lateral[open] {
 }
 
 .acceso-icono {
-  display: grid;
-  place-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 150px;
   height: 150px;
   border-radius: 50%;
