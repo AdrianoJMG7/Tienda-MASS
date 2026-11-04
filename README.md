@@ -62,6 +62,38 @@ MASS/
             └── vendedor/  PedidosTienda, Caja
 ```
 
+## Pantallas del administrador
+
+Cuenta demo: `admin@mass.test` / `Admin1234`.
+
+| Pantalla | Qué hace |
+|---|---|
+| Tiendas | Registrar, editar y desactivar tiendas; meta de ventas mensual |
+| Vendedores | Crear vendedores (con contraseña elegida o generada), asignarlos a una tienda y desactivarlos |
+| Catálogo | Productos con costo, precio, margen y stock total; historial de precios |
+| Ofertas | Precio especial con fechas de inicio y fin |
+| Categorías | Descripción, imagen y estado; una categoría inactiva oculta sus productos |
+| Reportes | Ventas, productos, tiendas, vendedores, pedidos y ofertas, con descarga en Excel o PDF; reporte de usabilidad |
+
+## Pantallas del vendedor
+
+Cuenta demo: `vendedor1@mass.test` / `Vendedor1234`.
+
+| Pantalla | Qué hace |
+|---|---|
+| Inicio | Accesos a pedidos, caja e inventario, con los datos de la tienda |
+| Pedidos Online | Preparar, marcar listo, entregar validando el código y cancelar |
+| Caja | Venta en curso, cobro con vuelto, boleta y ticket imprimibles, lector de códigos USB |
+| Cierre de caja | Resumen del turno, desglose por medio de pago y efectivo contado contra el esperado |
+| Inventario | Stock con su estado, ajustes con motivo, stock mínimo, vencimiento y movimientos |
+| Escáner QR | Lee códigos QR y de barras con la cámara (requiere HTTPS o localhost) |
+| Historial de ventas | Totales de hoy, la semana y el mes, filtros y exportación a Excel |
+| Devoluciones | Devuelve unidades de una venta; lo dañado o vencido no vuelve al stock |
+| Reportes | Ventas diarias, metas, productos más vendidos y comparativa de vendedores |
+| Mi perfil | Datos, foto, contraseña, tienda asignada y últimos accesos |
+
+La meta mensual de cada tienda la define el administrador en la pantalla Tiendas.
+
 ## Cómo ejecutarlo
 
 Requisitos: Python 3.12 o superior y Node 20 o superior.

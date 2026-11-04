@@ -5,10 +5,12 @@ interface Props {
   abierto: boolean;
   alCerrar: () => void;
   children: ReactNode;
+  /** "lateral" lo muestra como panel a la derecha, como los detalles del vendedor. */
+  variante?: "lateral";
 }
 
 /** Ventana modal nativa (<dialog>): atrapa el foco y se cierra con Escape. */
-export default function Dialogo({ titulo, abierto, alCerrar, children }: Props) {
+export default function Dialogo({ titulo, abierto, alCerrar, children, variante }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const idTitulo = useId();
 
@@ -20,7 +22,7 @@ export default function Dialogo({ titulo, abierto, alCerrar, children }: Props) 
   }, [abierto]);
 
   return (
-    <dialog ref={ref} className="dialogo" aria-labelledby={idTitulo} onClose={alCerrar}>
+    <dialog ref={ref} className={variante ? `dialogo ${variante}` : "dialogo"} aria-labelledby={idTitulo} onClose={alCerrar}>
       <div className="dialogo-cabecera">
         <h2 id={idTitulo}>{titulo}</h2>
         <button type="button" className="cerrar" aria-label="Cerrar" onClick={alCerrar}>

@@ -7,6 +7,7 @@ import { ProveedorCarrito } from "./carrito";
 import { ProveedorFavoritos } from "./favoritos";
 import "./styles.css";
 import "./tienda.css";
+import "./vendedor.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
