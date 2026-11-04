@@ -1,22 +1,13 @@
-import { NavLink, Outlet } from "react-router";
+import { Outlet } from "react-router";
+import { ProveedorVenta } from "../../ventaCaja";
 
-const SECCIONES = [
-  { ruta: "/vendedor", texto: "Inicio", exacta: true },
-  { ruta: "/vendedor/pedidos", texto: "Pedidos online" },
-  { ruta: "/vendedor/caja", texto: "Caja" },
-];
-
+/** Secciones del vendedor; el menú está en la cabecera. La venta en curso se comparte entre Caja y Escáner. */
 export default function LayoutVendedor() {
   return (
-    <>
-      <nav className="subnav" aria-label="Mi tienda">
-        {SECCIONES.map((s) => (
-          <NavLink key={s.ruta} to={s.ruta} end={s.exacta}>
-            {s.texto}
-          </NavLink>
-        ))}
-      </nav>
-      <Outlet />
-    </>
+    <ProveedorVenta>
+      <div className="vendedor">
+        <Outlet />
+      </div>
+    </ProveedorVenta>
   );
 }

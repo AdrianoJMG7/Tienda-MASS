@@ -2,8 +2,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import { conFiltros, post } from "../../api";
 import Campo from "../../componentes/Campo";
 import Dialogo from "../../componentes/Dialogo";
+import EncabezadoPagina from "../../componentes/EncabezadoPagina";
+import FotoProducto from "../../componentes/FotoProducto";
+import Icono from "../../componentes/Icono";
 import Paginacion from "../../componentes/Paginacion";
-import { formatoFechaHora, soles } from "../../formato";
+import { soles } from "../../formato";
 import type { EstadoPedido, MedioPago, Paginado, Pedido } from "../../tipos";
 import { useCarga, useEnvio, useRetraso } from "../../useCarga";
 
@@ -72,7 +75,7 @@ function FormularioEntrega({ pedido, alTerminar }: { pedido: Pedido; alTerminar:
         ))}
       </fieldset>
       {errores.medio_pago && <p className="error-campo">{errores.medio_pago}</p>}
-      <button className="boton ancho" disabled={enviando || codigo.length !== 6}>
+      <button className="boton-primario ancho grande" disabled={enviando || codigo.length !== 6}>
         {enviando ? "Registrando…" : `Entregar y cobrar ${soles(pedido.total)}`}
       </button>
     </form>
@@ -117,86 +120,97 @@ function FormularioCancelacion({ pedido, alTerminar }: { pedido: Pedido; alTermi
   );
 }
 
-function TarjetaPedido({ pedido, alAccion }: { pedido: Pedido; alAccion: (accion: string, p: Pedido) => void }) {
+const fechaPedido = new Intl.DateTimeFormat("es-PE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+
+/** Situación del pedido: cuánto falta para que venza o cómo terminó. */
+function EstadoFila({ pedido }: { pedido: Pedido }) {
   const horas = horasRestantes(pedido.vence_en);
+  if (pedido.estado === "entregado") {
+    return <span className="estado-fila listo"><Icono nombre="check" tamano={18} /> Entregado</span>;
+  }
+  if (pedido.estado === "cancelado") {
+    return (
+      <span className="estado-fila vence" title={pedido.motivo_cancelacion}>
+        <Icono nombre="prohibir" tamano={18} /> Cancelado por {pedido.cancelado_por_display.toLowerCase()}
+      </span>
+    );
+  }
+  if (horas <= 0) return <span className="estado-fila vence"><Icono nombre="reloj" tamano={18} /> Venció: se cancelará solo</span>;
+  if (pedido.estado === "listo") return <span className="estado-fila listo"><Icono nombre="check" tamano={18} /> Listo para entregar</span>;
+  if (horas < 6) {
+    return <span className="estado-fila vence"><Icono nombre="reloj" tamano={18} /> Vence en {horas < 1 ? "menos de 1 hora" : `${Math.floor(horas)} horas`}</span>;
+  }
+  if (pedido.estado === "en_preparacion") return <span className="estado-fila preparando"><Icono nombre="reloj" tamano={18} /> En preparación</span>;
+  return <span className="estado-fila preparando"><Icono nombre="reloj" tamano={18} /> Vence en {Math.floor(horas)} horas</span>;
+}
+
+function TarjetaPedido({ pedido, alAccion }: { pedido: Pedido; alAccion: (accion: string, p: Pedido) => void }) {
   const activo = !["entregado", "cancelado"].includes(pedido.estado);
   const unidades = pedido.detalles.reduce((suma, d) => suma + d.cantidad, 0);
+  const visibles = pedido.detalles.slice(0, 3);
+  const resto = pedido.detalles.length - visibles.length;
 
   return (
-    <article className="tarjeta tarjeta-pedido">
-      <header className="pedido-cabecera">
-        <div>
-          <h2>Pedido #{pedido.id}</h2>
-          <small className="dato-secundario">Recibido {formatoFechaHora(pedido.creado)}</small>
-        </div>
-        <span className={`insignia ${pedido.estado}`}>{pedido.estado_display}</span>
-      </header>
-
-      <p className="pedido-cliente">
-        <strong>{pedido.cliente_nombre}</strong>
+    <article className="tarjeta fila-pedido">
+      <div className="fila-pedido-id">
+        <h2>Pedido #{pedido.id}</h2>
+        <p className="con-icono">
+          <Icono nombre="calendario" tamano={18} /> Recibido: {fechaPedido.format(new Date(pedido.creado))}
+        </p>
+      </div>
+      <div className="fila-pedido-cliente">
+        <p className="con-icono">
+          <Icono nombre="usuario" tamano={18} /> {pedido.cliente_nombre}
+        </p>
         {pedido.cliente_celular && (
-          <a href={`tel:${pedido.cliente_celular}`} className="dato-secundario">
-            {pedido.cliente_celular}
+          <a href={`tel:${pedido.cliente_celular}`} className="con-icono">
+            <Icono nombre="telefono" tamano={18} /> {pedido.cliente_celular}
           </a>
         )}
-      </p>
-
-      <ul className="pedido-items">
-        {pedido.detalles.map((d) => (
-          <li key={d.producto}>
-            <strong>{d.cantidad} ×</strong> {d.nombre} <span className="dato-secundario">{d.marca}</span>
-          </li>
-        ))}
-      </ul>
-
-      <p className="pedido-total">
-        <span>
-          {unidades} {unidades === 1 ? "unidad" : "unidades"} · paga con {pedido.pagado_con ?? pedido.medio_pago_display}
-        </span>
-        <strong>{soles(pedido.total)}</strong>
-      </p>
-
-      {activo && (
-        <p className={`pedido-vence${horas < 6 ? " pronto" : ""}`}>
-          {horas > 0
-            ? `Vence ${formatoFechaHora(pedido.vence_en)} (en ${horas < 1 ? "menos de 1 hora" : `${Math.floor(horas)} h`})`
-            : "Venció: se cancelará automáticamente"}
+      </div>
+      <div className="fila-pedido-productos" title={pedido.detalles.map((d) => `${d.cantidad} × ${d.nombre}`).join(", ")}>
+        <div className="miniaturas">
+          {visibles.map((d) => (
+            <FotoProducto key={d.producto} producto={d} tamano={48} />
+          ))}
+          {resto > 0 && <span className="miniatura-mas">+{resto}</span>}
+        </div>
+        <small>{unidades} {unidades === 1 ? "producto" : "productos"}</small>
+      </div>
+      <div className="fila-pedido-total">
+        <strong>Total: {soles(pedido.total)}</strong>
+        <p className="con-icono">
+          <Icono nombre="tarjeta" tamano={18} /> Paga con: {pedido.pagado_con ?? pedido.medio_pago_display}
         </p>
-      )}
-      {pedido.estado === "entregado" && pedido.entregado_en && (
-        <p className="dato-secundario">Entregado {formatoFechaHora(pedido.entregado_en)}</p>
-      )}
-      {pedido.estado === "cancelado" && (
-        <p className="dato-secundario">
-          Cancelado por {pedido.cancelado_por_display.toLowerCase()}: {pedido.motivo_cancelacion}
-        </p>
-      )}
-
+        <EstadoFila pedido={pedido} />
+      </div>
       {activo && (
-        <div className="pedido-acciones">
+        <div className="fila-pedido-acciones">
           {pedido.estado === "recibido" && (
-            <button type="button" className="boton secundario" onClick={() => alAccion("preparar", pedido)}>
-              Empezar a preparar
+            <button type="button" className="boton-primario" onClick={() => alAccion("preparar", pedido)}>
+              <Icono nombre="iniciar" /> Empezar a preparar
             </button>
           )}
-          {pedido.estado !== "listo" && (
-            <button type="button" className="boton" onClick={() => alAccion("listo", pedido)}>
-              Marcar listo
+          {pedido.estado === "en_preparacion" && (
+            <button type="button" className="boton-primario" onClick={() => alAccion("listo", pedido)}>
+              <Icono nombre="check" /> Marcar listo
             </button>
           )}
           {pedido.estado === "listo" && (
-            <button type="button" className="boton" onClick={() => alAccion("entregar", pedido)}>
-              Entregar
+            <button type="button" className="boton-primario" onClick={() => alAccion("entregar", pedido)}>
+              <Icono nombre="camion" /> Entregar
             </button>
           )}
-          <button type="button" className="enlace peligro" onClick={() => alAccion("cancelar", pedido)}>
-            Cancelar
+          <button type="button" className="boton-contorno" onClick={() => alAccion("cancelar", pedido)}>
+            <Icono nombre="prohibir" /> Cancelar
           </button>
         </div>
       )}
     </article>
   );
 }
+
+const POR_PAGINA = 10;
 
 /** HU10: pedidos online de la tienda del vendedor, por estado. */
 export default function PedidosTienda() {
@@ -207,7 +221,7 @@ export default function PedidosTienda() {
   });
   const q = useRetraso(filtros.q);
   const { datos, error, cargando, recargar } = useCarga<Paginado<Pedido>>(
-    conFiltros("/pedidos/pedidos/", { ...filtros, q }),
+    conFiltros("/pedidos/pedidos/", { ...filtros, q, page_size: POR_PAGINA }),
   );
   const conteos = useCarga<Record<EstadoPedido, number>>("/pedidos/pedidos/conteos/");
   const [dialogo, setDialogo] = useState<{ tipo: "entregar" | "cancelar"; pedido: Pedido } | null>(null);
@@ -263,32 +277,33 @@ export default function PedidosTienda() {
 
   return (
     <section>
-      <div className="barra-titulo">
-        <div>
-          <h1>Pedidos online</h1>
-          <p className="subtitulo">Prepara los pedidos de tu tienda y entrégalos validando el código de recojo.</p>
-        </div>
-        <button type="button" className="boton secundario" onClick={actualizar}>
-          Actualizar
+      <EncabezadoPagina icono="carrito" titulo="Pedidos Online" subtitulo="Prepara los pedidos de tu tienda y entrégalos validando el código de recojo.">
+        <button type="button" className="boton-contorno" onClick={actualizar}>
+          <Icono nombre="actualizar" className={cargando ? "girando" : undefined} /> Actualizar
         </button>
-      </div>
+      </EncabezadoPagina>
 
-      <div className="pestanas" role="group" aria-label="Estado del pedido">
+      <div className="pestanas-vendedor" role="group" aria-label="Estado del pedido">
         {ESTADOS.map((e) => (
           <button
             key={e.valor}
             type="button"
+            className={filtros.estado === e.valor ? "activa" : undefined}
             aria-pressed={filtros.estado === e.valor}
             onClick={() => setFiltros({ ...filtros, estado: e.valor, page: 1 })}
           >
             {e.texto}
-            {conteos.datos && <span className="contador">{conteos.datos[e.valor]}</span>}
+            {conteos.datos && ` (${conteos.datos[e.valor]})`}
           </button>
         ))}
       </div>
-      <div className="filtros">
-        <Campo
-          etiqueta="Buscar"
+      <div className="buscador buscador-pagina">
+        <Icono nombre="buscar" />
+        <label htmlFor="buscar-pedido" className="solo-lector">
+          Buscar por número de pedido o nombre del cliente
+        </label>
+        <input
+          id="buscar-pedido"
           type="search"
           placeholder="N.º de pedido o nombre del cliente"
           value={filtros.q}
@@ -296,20 +311,23 @@ export default function PedidosTienda() {
         />
       </div>
 
-      <p className="aviso" role="status">{aviso}</p>
+      {aviso && <p className="aviso" role="status">{aviso}</p>}
       {(error || errorAccion) && <p className="alerta" role="alert">{errorAccion || error}</p>}
       {cargando && !datos ? (
         <p className="estado">Cargando pedidos…</p>
       ) : datos?.results.length === 0 ? (
-        <p className="estado">No hay pedidos en este estado.</p>
+        <div className="tarjeta vacio">
+          <Icono nombre="caja" tamano={44} />
+          <p>No hay pedidos en este estado.</p>
+        </div>
       ) : (
-        <div className="lista-pedidos" aria-busy={cargando}>
+        <div className="filas-pedidos" aria-busy={cargando}>
           {datos?.results.map((p) => (
             <TarjetaPedido key={p.id} pedido={p} alAccion={alAccion} />
           ))}
         </div>
       )}
-      <Paginacion pagina={filtros.page} total={datos?.count ?? 0} alCambiar={(page) => setFiltros({ ...filtros, page })} />
+      <Paginacion pagina={filtros.page} total={datos?.count ?? 0} porPagina={POR_PAGINA} alCambiar={(page) => setFiltros({ ...filtros, page })} />
 
       <Dialogo
         titulo={dialogo?.tipo === "entregar" ? "Entregar pedido" : "Cancelar pedido"}

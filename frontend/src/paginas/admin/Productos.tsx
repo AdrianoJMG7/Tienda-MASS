@@ -1,8 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router";
 import { conFiltros, patch, post } from "../../api";
 import Campo from "../../componentes/Campo";
 import Casilla from "../../componentes/Casilla";
 import Dialogo from "../../componentes/Dialogo";
+import DialogoConfirmar from "../../componentes/DialogoConfirmar";
+import EncabezadoPagina from "../../componentes/EncabezadoPagina";
+import Icono from "../../componentes/Icono";
 import FotoProducto from "../../componentes/FotoProducto";
 import Paginacion from "../../componentes/Paginacion";
 import Seleccion from "../../componentes/Seleccion";
@@ -14,9 +18,10 @@ interface PropsFormulario {
   producto: Producto | null;
   categorias: Categoria[];
   alGuardar: () => void;
+  alCancelar: () => void;
 }
 
-function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario) {
+function FormularioProducto({ producto, categorias, alGuardar, alCancelar }: PropsFormulario) {
   const [datos, setDatos] = useState({
     nombre: producto?.nombre ?? "",
     marca: producto?.marca ?? "",
@@ -57,7 +62,7 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
   return (
     <form onSubmit={guardar} noValidate>
       {general && <p className="alerta" role="alert">{general}</p>}
-      <Campo etiqueta="Nombre y presentación" placeholder="Arroz extra 1 kg" value={datos.nombre} onChange={cambiar("nombre")} error={errores.nombre} required />
+      <Campo etiqueta="Nombre y presentación *" placeholder="Ej.: Arroz extra 1 kg" value={datos.nombre} onChange={cambiar("nombre")} error={errores.nombre} required />
       <div className="campo">
         <label htmlFor="descripcion-producto">Descripción (opcional)</label>
         <textarea
@@ -71,15 +76,15 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
         {errores.descripcion && <p className="error-campo">{errores.descripcion}</p>}
       </div>
       <div className="rejilla-formulario">
-        <Campo etiqueta="Marca" value={datos.marca} onChange={cambiar("marca")} error={errores.marca} required />
-        <Seleccion etiqueta="Categoría" value={datos.categoria} onChange={cambiar("categoria")} error={errores.categoria} required>
+        <Campo etiqueta="Marca *" placeholder="Ej.: Don Vittorio" value={datos.marca} onChange={cambiar("marca")} error={errores.marca} required />
+        <Seleccion etiqueta="Categoría *" value={datos.categoria} onChange={cambiar("categoria")} error={errores.categoria} required>
           <option value="">Elige una categoría</option>
           {categorias.map((c) => (
             <option key={c.id} value={c.id}>{c.nombre}</option>
           ))}
         </Seleccion>
         <Campo
-          etiqueta="Código de barras"
+          etiqueta="Código de barras *"
           inputMode="numeric"
           value={datos.codigo_barras}
           onChange={cambiar("codigo_barras")}
@@ -88,9 +93,9 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
           required
         />
         <div />
-        <Campo etiqueta="Costo (S/)" type="number" min="0" step="0.01" value={datos.costo} onChange={cambiar("costo")} error={errores.costo} required />
+        <Campo etiqueta="Costo (S/) *" type="number" min="0" step="0.01" value={datos.costo} onChange={cambiar("costo")} error={errores.costo} required />
         <Campo
-          etiqueta="Precio de venta (S/)"
+          etiqueta="Precio de venta (S/) *"
           type="number"
           min="0.1"
           step="0.01"
@@ -117,9 +122,10 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
       )}
       <Casilla marcada={marcaPropia} alCambiar={setMarcaPropia}>Marca propia</Casilla>
       <Casilla marcada={activo} alCambiar={setActivo}>Activo (visible en el catálogo)</Casilla>
-      <button className="boton ancho" disabled={enviando}>
-        {enviando ? "Guardando…" : "Guardar producto"}
-      </button>
+      <div className="acciones-dialogo">
+        <button type="button" className="boton-contorno" onClick={alCancelar}>Cancelar</button>
+        <button className="boton-primario" disabled={enviando}>{enviando ? "Guardando…" : "Guardar producto"}</button>
+      </div>
     </form>
   );
 }
@@ -130,7 +136,7 @@ function HistorialPrecios({ producto }: { producto: Producto }) {
   if (cargando) return <p className="estado">Cargando…</p>;
   if (!datos?.length) return <p className="estado">El precio de este producto no ha cambiado.</p>;
   return (
-    <table className="tabla compacta">
+    <table className="tabla tabla-vendedor">
       <thead>
         <tr>
           <th>Fecha</th>
@@ -153,113 +159,176 @@ function HistorialPrecios({ producto }: { producto: Producto }) {
   );
 }
 
+const POR_PAGINA = 10;
+
+/** HU05: catálogo central. Los productos no se borran: se desactivan. */
 export default function Productos() {
-  const [filtros, setFiltros] = useState({ q: "", categoria: "", estado: "activos", marca_propia: false, en_oferta: false, page: 1 });
+  const [params] = useSearchParams();
+  const qCabecera = params.get("q") ?? "";
+  const [filtros, setFiltros] = useState({ q: qCabecera, categoria: "", stock: "", estado: "todos", page: 1 });
   const q = useRetraso(filtros.q);
   const { datos: categorias } = useCarga<Categoria[]>("/categorias/categorias/");
-  const { datos, error, cargando, recargar } = useCarga<Paginado<Producto>>(conFiltros("/productos/productos/", { ...filtros, q }));
+  const { datos, error, cargando, recargar } = useCarga<Paginado<Producto>>(conFiltros("/productos/productos/", { ...filtros, q, page_size: POR_PAGINA }));
   const [editando, setEditando] = useState<Producto | null | undefined>(undefined);
   const [historial, setHistorial] = useState<Producto | null>(null);
+  const [desactivando, setDesactivando] = useState<Producto | null>(null);
   const [aviso, setAviso] = useState("");
+  const [errorAccion, setErrorAccion] = useState("");
   const filtrar = (cambios: Partial<typeof filtros>) => setFiltros({ ...filtros, ...cambios, page: 1 });
+
+  // El buscador de la cabecera también filtra esta tabla.
+  useEffect(() => {
+    setFiltros((f) => ({ ...f, q: qCabecera, page: 1 }));
+  }, [qCabecera]);
+
+  async function cambiarEstado(p: Producto, activo: boolean) {
+    setErrorAccion("");
+    await patch(`/productos/productos/${p.id}/`, { activo });
+    setAviso(`${p.nombre} fue ${activo ? "activado" : "desactivado"}.`);
+    recargar();
+  }
 
   return (
     <section>
-      <div className="barra-titulo">
-        <div>
-          <h1>Catálogo y precios</h1>
-          <p className="subtitulo">Un solo catálogo y un solo precio para la web y todas las tiendas.</p>
-        </div>
-        <button type="button" className="boton" onClick={() => setEditando(null)}>Nuevo producto</button>
-      </div>
+      <EncabezadoPagina icono="cuadricula" titulo="Catálogo" subtitulo="Productos que se venden en la web y en las tiendas." />
 
-      <div className="filtros">
-        <Campo etiqueta="Buscar" type="search" placeholder="Nombre, marca o código" value={filtros.q} onChange={(e) => filtrar({ q: e.target.value })} />
-        <Seleccion etiqueta="Categoría" value={filtros.categoria} onChange={(e) => filtrar({ categoria: e.target.value })}>
-          <option value="">Todas</option>
-          {categorias?.map((c) => (
-            <option key={c.id} value={c.id}>{c.nombre}</option>
-          ))}
-        </Seleccion>
-        <Seleccion etiqueta="Estado" value={filtros.estado} onChange={(e) => filtrar({ estado: e.target.value })}>
-          <option value="activos">Activos</option>
-          <option value="inactivos">Inactivos</option>
-          <option value="todos">Todos</option>
-        </Seleccion>
-        <div className="filtros-casillas">
-          <Casilla marcada={filtros.marca_propia} alCambiar={(marca_propia) => filtrar({ marca_propia })}>Marca propia</Casilla>
-          <Casilla marcada={filtros.en_oferta} alCambiar={(en_oferta) => filtrar({ en_oferta })}>En oferta</Casilla>
+      <div className="filtros-admin">
+        <div className="buscador">
+          <Icono nombre="buscar" />
+          <label htmlFor="buscar-producto" className="solo-lector">Buscar por nombre, marca o código</label>
+          <input id="buscar-producto" type="search" placeholder="Buscar nombre, marca o código" value={filtros.q} onChange={(e) => filtrar({ q: e.target.value })} />
         </div>
-      </div>
-
-      <p className="aviso" role="status">
-        {aviso || (datos ? `${datos.count} productos` : "")}
-      </p>
-      {error && <p className="alerta" role="alert">{error}</p>}
-      {cargando && !datos ? (
-        <p className="estado">Cargando…</p>
-      ) : datos?.results.length === 0 ? (
-        <p className="estado">No hay productos con esos filtros.</p>
-      ) : (
-        <table className="tabla">
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Categoría</th>
-              <th>Código</th>
-              <th className="numero">Costo</th>
-              <th className="numero">Precio</th>
-              <th>Estado</th>
-              <th><span className="solo-lector">Acciones</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {datos?.results.map((p) => (
-              <tr key={p.id}>
-                <td data-titulo="Producto">
-                  <div className="producto-celda">
-                    <FotoProducto producto={p} />
-                    <div>
-                      <strong>{p.nombre}</strong>
-                      <small className="dato-secundario">
-                        {p.marca}
-                        {p.marca_propia && <span className="insignia propia">Marca propia</span>}
-                      </small>
-                    </div>
-                  </div>
-                </td>
-                <td data-titulo="Categoría">{p.categoria_nombre}</td>
-                <td data-titulo="Código"><code>{p.codigo_barras}</code></td>
-                <td data-titulo="Costo" className="numero">{p.costo != null ? soles(p.costo) : "—"}</td>
-                <td data-titulo="Precio" className="numero">
-                  {p.precio_oferta != null ? (
-                    <>
-                      <s className="dato-secundario">{soles(p.precio)}</s>
-                      <strong className="precio-oferta">{soles(p.precio_oferta)}</strong>
-                      <small className="dato-secundario">hasta {formatoFecha(p.oferta_fin!)}</small>
-                    </>
-                  ) : (
-                    soles(p.precio)
-                  )}
-                </td>
-                <td data-titulo="Estado">
-                  <span className={`insignia ${p.activo ? "activa" : "inactiva"}`}>{p.activo ? "Activo" : "Inactivo"}</span>
-                </td>
-                <td className="acciones">
-                  <button type="button" className="enlace" onClick={() => setEditando(p)}>Editar</button>
-                  <button type="button" className="enlace" onClick={() => setHistorial(p)}>Historial</button>
-                </td>
-              </tr>
+        <span className="filtro-icono">
+          <Icono nombre="etiqueta" />
+          <label htmlFor="filtro-categoria" className="solo-lector">Categoría</label>
+          <select id="filtro-categoria" value={filtros.categoria} onChange={(e) => filtrar({ categoria: e.target.value })}>
+            <option value="">Categoría: Todas</option>
+            {categorias?.map((c) => (
+              <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
-          </tbody>
-        </table>
+          </select>
+        </span>
+        <span className="filtro-icono">
+          <Icono nombre="caja" />
+          <label htmlFor="filtro-stock" className="solo-lector">Stock</label>
+          <select id="filtro-stock" value={filtros.stock} onChange={(e) => filtrar({ stock: e.target.value })}>
+            <option value="">Stock: Todos</option>
+            <option value="con_stock">Con stock</option>
+            <option value="sin_stock">Sin stock</option>
+          </select>
+        </span>
+        <span className="filtro-icono">
+          <Icono nombre="check" />
+          <label htmlFor="filtro-estado" className="solo-lector">Estado</label>
+          <select id="filtro-estado" value={filtros.estado} onChange={(e) => filtrar({ estado: e.target.value })}>
+            <option value="todos">Estado: Todos</option>
+            <option value="activos">Activos</option>
+            <option value="inactivos">Inactivos</option>
+          </select>
+        </span>
+        <button type="button" className="boton-primario accion-derecha" onClick={() => setEditando(null)}>
+          <Icono nombre="mas" /> Nuevo producto
+        </button>
+      </div>
+
+      {aviso && <p className="aviso" role="status">{aviso}</p>}
+      {(error || errorAccion) && <p className="alerta" role="alert">{errorAccion || error}</p>}
+      {cargando && !datos ? (
+        <p className="estado">Cargando productos…</p>
+      ) : (
+        <div className="tarjeta contenedor-tabla">
+          <table className="tabla tabla-vendedor" aria-busy={cargando}>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Categoría</th>
+                <th>Código de barras</th>
+                <th>Costo (S/)</th>
+                <th>Precio (S/)</th>
+                <th>Stock total</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {datos?.results.map((p) => (
+                <tr key={p.id}>
+                  <td data-titulo="Producto">
+                    <span className="producto-celda">
+                      <FotoProducto producto={p} tamano={44} />
+                      <span>
+                        <strong>{p.nombre}</strong>
+                        <small className="dato-secundario">
+                          {p.marca}
+                          {p.marca_propia && <span className="insignia propia">Marca propia</span>}
+                        </small>
+                      </span>
+                    </span>
+                  </td>
+                  <td data-titulo="Categoría">{p.categoria_nombre}</td>
+                  <td data-titulo="Código de barras">{p.codigo_barras}</td>
+                  <td data-titulo="Costo (S/)">{p.costo != null ? soles(p.costo) : "—"}</td>
+                  <td data-titulo="Precio (S/)">
+                    {p.precio_oferta != null ? (
+                      <>
+                        <strong className="precio-oferta">{soles(p.precio_oferta)}</strong>
+                        <small className="dato-secundario">
+                          <s>{soles(p.precio)}</s> hasta {formatoFecha(p.oferta_fin!)}
+                        </small>
+                      </>
+                    ) : (
+                      soles(p.precio)
+                    )}
+                  </td>
+                  <td data-titulo="Stock total">{p.stock_total ?? 0}</td>
+                  <td data-titulo="Estado">
+                    <span className={`estado-stock ${p.activo ? "disponible" : "agotado"}`}>
+                      <i aria-hidden="true" /> {p.activo ? "Activo" : "Inactivo"}
+                    </span>
+                  </td>
+                  <td data-titulo="Acciones">
+                    <div className="acciones-fila">
+                      <button type="button" className="boton-contorno pequeno" onClick={() => setEditando(p)}>
+                        <Icono nombre="lapiz" tamano={18} /> Editar<span className="solo-lector"> {p.nombre}</span>
+                      </button>
+                      {p.activo ? (
+                        <button type="button" className="boton-contorno pequeno" onClick={() => setDesactivando(p)}>
+                          <Icono nombre="apagar" tamano={18} /> Desactivar<span className="solo-lector"> {p.nombre}</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="boton-contorno pequeno"
+                          onClick={() => cambiarEstado(p, true).catch((e: Error) => setErrorAccion(e.message))}
+                        >
+                          <Icono nombre="iniciar" tamano={18} /> Activar<span className="solo-lector"> {p.nombre}</span>
+                        </button>
+                      )}
+                      <button type="button" className="boton-icono pequeno" aria-label={`Historial de precios de ${p.nombre}`} title="Historial de precios" onClick={() => setHistorial(p)}>
+                        <Icono nombre="historial" tamano={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {datos?.results.length === 0 && <p className="estado">No hay productos con esos filtros.</p>}
+          <div className="pie-tabla">
+            <span>
+              {datos && datos.count > 0 &&
+                `Mostrando ${(filtros.page - 1) * POR_PAGINA + 1} – ${Math.min(filtros.page * POR_PAGINA, datos.count)} de ${datos.count} productos`}
+            </span>
+            <Paginacion pagina={filtros.page} total={datos?.count ?? 0} porPagina={POR_PAGINA} alCambiar={(page) => setFiltros({ ...filtros, page })} />
+          </div>
+        </div>
       )}
-      <Paginacion pagina={filtros.page} total={datos?.count ?? 0} alCambiar={(page) => setFiltros({ ...filtros, page })} />
 
       <Dialogo titulo={editando ? "Editar producto" : "Nuevo producto"} abierto={editando !== undefined} alCerrar={() => setEditando(undefined)}>
         <FormularioProducto
           producto={editando ?? null}
           categorias={categorias ?? []}
+          alCancelar={() => setEditando(undefined)}
           alGuardar={() => {
             setAviso(editando ? "Producto actualizado." : "Producto creado.");
             setEditando(undefined);
@@ -270,6 +339,15 @@ export default function Productos() {
       <Dialogo titulo={`Historial de precios: ${historial?.nombre ?? ""}`} abierto={historial !== null} alCerrar={() => setHistorial(null)}>
         {historial && <HistorialPrecios producto={historial} />}
       </Dialogo>
+      <DialogoConfirmar
+        titulo="Desactivar producto"
+        abierto={desactivando !== null}
+        textoConfirmar="Sí, desactivar"
+        alCerrar={() => setDesactivando(null)}
+        alConfirmar={() => cambiarEstado(desactivando!, false)}
+      >
+        <p>{desactivando?.nombre} dejará de mostrarse en la tienda y en caja.</p>
+      </DialogoConfirmar>
     </section>
   );
 }

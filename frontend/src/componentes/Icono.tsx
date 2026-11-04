@@ -173,6 +173,128 @@ const TRAZOS = {
   ),
   cambiar: <path d="M4 8h14l-3-3M20 16H6l3 3" />,
   cerrar: <path d="M6 6l12 12M18 6L6 18" />,
+  mas: <path d="M12 5v14M5 12h14" />,
+  apagar: <path d="M12 3v9M6.3 6.7a8 8 0 1 0 11.4 0" />,
+  cuadricula: (
+    <>
+      <rect x="4" y="4" width="7" height="7" rx="1.5" />
+      <rect x="13" y="4" width="7" height="7" rx="1.5" />
+      <rect x="4" y="13" width="7" height="7" rx="1.5" />
+      <rect x="13" y="13" width="7" height="7" rx="1.5" />
+    </>
+  ),
+  imagen: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="8.5" cy="10" r="1.5" />
+      <path d="M21 16l-5-5-8 8" />
+    </>
+  ),
+  registradora: (
+    <>
+      <path d="M8 9V4h8v5M6 9h12l2 7H4z" />
+      <rect x="3" y="16" width="18" height="5" rx="1" />
+      <path d="M8 12h2M13 12h3M10 18.5h4" />
+    </>
+  ),
+  cajas: (
+    <>
+      <path d="M12 3l4 2v4l-4 2-4-2V5zM7 11l4 2v4l-4 2-4-2v-4zM17 11l4 2v4l-4 2-4-2v-4z" />
+      <path d="M8 5l4 2 4-2M3 13l4 2 4-2M13 13l4 2 4-2" />
+    </>
+  ),
+  qr: (
+    <>
+      <path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" />
+      <rect x="7" y="7" width="4" height="4" />
+      <rect x="13" y="7" width="4" height="4" />
+      <rect x="7" y="13" width="4" height="4" />
+      <path d="M13 13h2v2M17 13v.01M13 17h4v-2" />
+    </>
+  ),
+  historial: (
+    <>
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5M12 7v5l3 2" />
+    </>
+  ),
+  grafico: (
+    <>
+      <path d="M4 20v-5h4v5zM10 20v-9h4v9zM16 20V8h4v12z" />
+      <path d="M4 10l5-5 4 3 6-6M15 2h4v4" />
+    </>
+  ),
+  barras: <path d="M4 20v-6h4v6zM10 20V6h4v14zM16 20v-9h4v9z" />,
+  actualizar: (
+    <>
+      <path d="M20 11a8 8 0 0 0-14-4.5L4 8.5M4 13a8 8 0 0 0 14 4.5l2-2" />
+      <path d="M4 4v4.5h4.5M20 20v-4.5h-4.5" />
+    </>
+  ),
+  iniciar: <path d="M7 4l13 8-13 8z" />,
+  prohibir: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M5.7 5.7l12.6 12.6" />
+    </>
+  ),
+  camion: (
+    <>
+      <path d="M2 6h12v11H2zM14 10h4l4 4v3h-8z" />
+      <circle cx="7" cy="18" r="2" />
+      <circle cx="17" cy="18" r="2" />
+    </>
+  ),
+  linterna: <path d="M7 3h10v4l-2 4v10H9V11L7 7zM7 7h10M12 14v2" />,
+  descargar: <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />,
+  imprimir: (
+    <>
+      <path d="M7 8V3h10v5M7 17H4v-7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7h-3" />
+      <rect x="7" y="14" width="10" height="7" />
+    </>
+  ),
+  devolver: (
+    <>
+      <path d="M4 9h11a5 5 0 0 1 0 10H9" />
+      <path d="M8 5L4 9l4 4" />
+    </>
+  ),
+  escudo: <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4" />,
+  trofeo: (
+    <>
+      <path d="M8 3h8v7a4 4 0 0 1-8 0zM8 5H4v2a4 4 0 0 0 4 4M16 5h4v2a4 4 0 0 1-4 4" />
+      <path d="M12 14v4M9 18h6v3H9z" />
+    </>
+  ),
+  campana: <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4" />,
+  monedas: (
+    <>
+      <ellipse cx="12" cy="6" rx="8" ry="3" />
+      <path d="M4 6v4c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 10v4c0 1.7 3.6 3 8 3s8-1.3 8-3v-4M4 14v4c0 1.7 3.6 3 8 3s8-1.3 8-3v-4" />
+    </>
+  ),
+  alerta: <path d="M12 4l9 16H3zM12 10v4M12 17h.01" />,
+  usuarios: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.5c2 .8 3.5 2.8 3.5 5.5" />
+    </>
+  ),
+  calculadora: (
+    <>
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" />
+    </>
+  ),
+  circular: (
+    <>
+      <path d="M12 3a9 9 0 1 0 9 9h-9z" />
+      <path d="M15 3.5A9 9 0 0 1 20.5 9H15z" />
+    </>
+  ),
+  flechaSube: <path d="M6 18L18 6M9 6h9v9" />,
+  flechaBaja: <path d="M6 6l12 12M18 9v9H9" />,
+  telefono: <path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z" />,
 } satisfies Record<string, ReactElement>;
 
 export type NombreIcono = keyof typeof TRAZOS;

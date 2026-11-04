@@ -33,7 +33,7 @@
 }
 
 /* Las páginas de la tienda usan todo el ancho de la pantalla, con un margen lateral proporcional. */
-main:has(.catalogo, .detalle-producto, .pagina-carrito, .pagina-confirmar, .pedido-confirmado, .cuenta, .elegir-tienda, .pantalla-ingreso) {
+main:has(.catalogo, .detalle-producto, .pagina-carrito, .pagina-confirmar, .pedido-confirmado, .cuenta, .elegir-tienda, .pantalla-ingreso, .vendedor) {
   max-width: none;
   padding-left: clamp(16px, 3vw, 56px);
   padding-right: clamp(16px, 3vw, 56px);

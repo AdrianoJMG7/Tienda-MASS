@@ -134,17 +134,19 @@ export async function api<T>(ruta: string, opciones: RequestInit = {}, reintenta
   return (await respuesta.json()) as T;
 }
 
-/** Descarga un archivo de la API (p. ej. un reporte en Excel o PDF) y lo guarda con el nombre que indica el servidor. */
-export async function descargar(ruta: string, reintentar = true): Promise<void> {
+/** Pide un archivo a la API (p. ej. un reporte en Excel o PDF) y lo guarda con el nombre que indica el servidor. */
+async function pedirArchivo(ruta: string, opciones: RequestInit, reintentar = true): Promise<void> {
   const tokens = leerTokens();
+  const headers = new Headers(opciones.headers);
+  if (tokens) headers.set("Authorization", `Bearer ${tokens.access}`);
   let respuesta: Response;
   try {
-    respuesta = await fetch(`${BASE}${ruta}`, { headers: tokens ? { Authorization: `Bearer ${tokens.access}` } : {} });
+    respuesta = await fetch(`${BASE}${ruta}`, { ...opciones, headers });
   } catch {
     throw new ErrorApi(0, "No hay conexión con el servidor.");
   }
   if (respuesta.status === 401 && tokens && reintentar && (await renovar(tokens.refresh))) {
-    return descargar(ruta, false);
+    return pedirArchivo(ruta, opciones, false);
   }
   if (!respuesta.ok) throw await convertirError(respuesta);
 
@@ -156,6 +158,12 @@ export async function descargar(ruta: string, reintentar = true): Promise<void> 
   enlace.click();
   URL.revokeObjectURL(url);
 }
+
+export const descargar = (ruta: string) => pedirArchivo(ruta, {});
+
+/** Igual que descargar, para los archivos que se generan a partir de datos enviados. */
+export const descargarConDatos = (ruta: string, datos: unknown) =>
+  pedirArchivo(ruta, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(datos) });
 
 const cuerpo = (datos: unknown) => (datos instanceof FormData ? datos : JSON.stringify(datos));
 
@@ -176,16 +184,3 @@ export function conFiltros(ruta: string, filtros: Record<string, ValorFiltro | V
   const texto = params.toString();
   return texto ? `${ruta}?${texto}` : ruta;
 }
-
-// Funciones específicas para inventario (HU14, HU15)
-export const getInventario = (filtros?: Record<string, string | number | boolean | undefined>) =>
-  api<any[]>(conFiltros("/inventario/inventario/", filtros || {}));
-
-export const getAlertas = () => api<any>("/inventario/inventario/alertas/");
-
-export const getMovimientos = (filtros?: Record<string, string | number | boolean | undefined>) =>
-  api<any[]>(conFiltros("/inventario/movimientos/", filtros || {}));
-
-export const registrarIngreso = (items: unknown[]) => post<any>("/inventario/inventario/ingreso/", items);
-
-export const registrarMerma = (items: unknown[]) => post<any>("/inventario/inventario/merma/", items);

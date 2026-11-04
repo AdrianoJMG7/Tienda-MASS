@@ -14,6 +14,8 @@ export interface Tienda {
   horario: string;
   activa: boolean;
   vendedores_activos?: number;
+  /** Solo la recibe el administrador. */
+  meta_mensual?: number;
 }
 
 export interface Vendedor {
@@ -25,11 +27,16 @@ export interface Vendedor {
   tienda_codigo: string;
   tienda_nombre: string;
   is_active: boolean;
+  /** Solo al crearlo sin contraseña: se muestra una vez para entregársela. */
+  password_temporal?: string;
 }
 
 export interface Categoria {
   id: number;
   nombre: string;
+  descripcion?: string;
+  imagen?: string | null;
+  activa?: boolean;
   total_productos?: number;
 }
 
@@ -51,6 +58,8 @@ export interface Producto {
   activo: boolean;
   /** Unidades en la tienda elegida; solo viene cuando se consulta con ?tienda= */
   disponible?: number;
+  /** Solo la recibe el administrador: suma de todas las tiendas. */
+  stock_total?: number;
 }
 
 export type MedioPago = "efectivo" | "tarjeta" | "yape_plin";
@@ -100,6 +109,7 @@ export interface Oferta {
   producto: number;
   producto_nombre: string;
   producto_marca: string;
+  producto_foto?: string | null;
   precio_normal: number;
   precio_especial: number;
   inicio: string;
@@ -113,50 +123,6 @@ export interface CambioPrecio {
   precio_nuevo: number;
   usuario_nombre: string | null;
   fecha: string;
-}
-
-export type CanalVenta = "caja" | "web";
-
-export interface DetalleVenta {
-  id: number;
-  producto: number;
-  producto_nombre: string;
-  cantidad: number;
-  precio_unitario: number;
-  subtotal: number;
-}
-
-export interface Venta {
-  id: number;
-  tienda: number;
-  tienda_codigo: string;
-  vendedor: number;
-  vendedor_nombre: string;
-  fecha: string;
-  total: number;
-  medio_pago: MedioPago;
-  numero_ticket: string | null;
-  canal: CanalVenta;
-  pedido: number | null;
-  detalles: DetalleVenta[];
-  vuelto: number | null;
-}
-
-export interface ItemVenta {
-  producto: number;
-  cantidad: number;
-}
-
-export interface Stock {
-  id: number;
-  tienda: number;
-  producto: number;
-  cantidad: number;
-  reservado: number;
-  stock_minimo: number;
-  fecha_vencimiento: string | null;
-  producto_nombre: string;
-  tienda_codigo: string;
 }
 
 export type TipoMovimiento = "reserva" | "liberacion" | "venta" | "ingreso" | "merma";
@@ -175,38 +141,6 @@ export interface MovimientoStock {
   fecha: string;
   producto_nombre: string;
   tienda_codigo: string;
-}
-
-export interface AlertaStock {
-  producto: number;
-  producto_nombre: string;
-  cantidad: number;
-  stock_minimo?: number;
-  fecha_vencimiento?: string;
-  dias_para_vencer?: number;
-}
-
-export interface AlertasResponse {
-  bajo_stock: AlertaStock[];
-  por_vencer: AlertaStock[];
-  resumen: {
-    bajo_stock_count: number;
-    por_vencer_count: number;
-  };
-}
-
-export interface ItemIngreso {
-  producto: number;
-  cantidad: number;
-  fecha_vencimiento?: string;
-  motivo?: string;
-}
-
-export interface ItemMerma {
-  producto: number;
-  cantidad: number;
-  motivo: "vencido" | "dañado";
-  nota?: string;
 }
 
 /** HU16: panel de ventas y pedidos. Montos en soles. */
@@ -233,8 +167,108 @@ export interface PanelReportes {
     ticket_promedio: number;
     pedidos: number;
     minutos_preparacion: number | null;
+    variacion: number | null;
+  }[];
+  variacion: Record<"total" | "ventas" | "pedidos" | "clientes" | "ticket_promedio", number | null>;
+  clientes_unicos: number;
+  por_categoria: { categoria: string; total: number; porcentaje: number }[];
+  por_vendedor: { vendedor: string; tienda: string; ventas: number; total: number; ticket_promedio: number }[];
+  ofertas: {
+    oferta: number;
+    producto: string;
+    marca: string;
+    precio_normal: number;
+    precio_especial: number;
+    inicio: string;
+    fin: string;
+    estado: EstadoOferta;
+    unidades: number;
+    total: number;
   }[];
   por_dia: { fecha: string; caja: number; web: number }[];
   por_estado: { estado: EstadoPedido; estado_display: string; pedidos: number }[];
   top_productos: { producto: number; nombre: string; marca: string; unidades: number; total: number }[];
+}
+
+/** Línea de una venta, con lo que aún se puede devolver. */
+export interface DetalleVenta {
+  id: number;
+  producto: number;
+  producto_nombre: string;
+  producto_marca: string;
+  producto_foto: string | null;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  devuelto: number;
+  disponible_devolver: number;
+}
+
+export type EstadoVenta = "completada" | "devolucion_parcial" | "devuelta";
+
+export interface Venta {
+  id: number;
+  vendedor_nombre: string;
+  fecha: string;
+  total: number;
+  medio_pago: MedioPago;
+  medio_pago_display: string;
+  numero_ticket: string;
+  canal: "caja" | "web";
+  canal_display: string;
+  detalles: DetalleVenta[];
+  monto_recibido: number | null;
+  vuelto: number | null;
+  /** Solo las ventas de pedidos online tienen cliente registrado. */
+  cliente_nombre: string | null;
+  cliente_celular: string | null;
+  estado: EstadoVenta;
+  estado_nombre: string;
+}
+
+export interface FilaInventario {
+  id: number;
+  producto: number;
+  nombre: string;
+  marca: string;
+  codigo_barras: string;
+  foto: string | null;
+  categoria: number;
+  categoria_nombre: string;
+  precio_final: number;
+  cantidad: number;
+  reservado: number;
+  stock_minimo: number;
+  fecha_vencimiento: string | null;
+  estado: "disponible" | "bajo_stock" | "agotado";
+}
+
+export interface PanelInventario extends Paginado<FilaInventario> {
+  total_tienda: number;
+  categorias: { id: number; nombre: string; productos: number }[];
+}
+
+export interface TurnoCaja {
+  inicio: string;
+  fin: string;
+  ventas: number;
+  unidades: number;
+  total: number;
+  ticket_mas_alto: number | null;
+  ticket_mas_alto_numero: string | null;
+  medios: { medio: MedioPago; medio_display: string; total: number; porcentaje: number }[];
+  ventas_efectivo: number;
+  devoluciones_efectivo: number;
+  efectivo_esperado: number;
+  variacion: { total: number | null; ventas: number | null; unidades: number | null };
+}
+
+export interface PanelTienda {
+  dias: number;
+  resumen: { ventas: number; tickets: number; ticket_promedio: number; pedidos: number; unidades: number };
+  variacion: Record<"ventas" | "tickets" | "ticket_promedio" | "pedidos" | "unidades", number | null>;
+  por_dia: { fecha: string; total: number }[];
+  top_productos: { producto: number; nombre: string; marca: string; unidades: number; total: number; porcentaje: number }[];
+  vendedores: { vendedor: string; total: number }[];
+  metas: { nombre: string; meta: number; actual: number; cumplida: boolean }[];
 }

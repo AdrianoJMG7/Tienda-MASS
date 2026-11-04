@@ -22,11 +22,16 @@ import Ofertas from "./paginas/admin/Ofertas";
 import Productos from "./paginas/admin/Productos";
 import Tiendas from "./paginas/admin/Tiendas";
 import Vendedores from "./paginas/admin/Vendedores";
-import InicioRol from "./paginas/InicioRol";
+import InicioAdmin from "./paginas/admin/InicioAdmin";
 import LayoutVendedor from "./paginas/vendedor/LayoutVendedor";
 import PedidosTienda from "./paginas/vendedor/PedidosTienda";
 import Caja from "./paginas/vendedor/Caja";
+import Devoluciones from "./paginas/vendedor/Devoluciones";
+import Escaner from "./paginas/vendedor/Escaner";
+import HistorialVentas from "./paginas/vendedor/HistorialVentas";
+import InicioVendedor from "./paginas/vendedor/InicioVendedor";
 import Inventario from "./paginas/vendedor/Inventario";
+import MiPerfil from "./paginas/vendedor/MiPerfil";
 import Ingresar from "./paginas/Ingresar";
 import Privacidad from "./paginas/Privacidad";
 import Registro from "./paginas/Registro";
@@ -35,6 +40,19 @@ import { useCarga } from "./useCarga";
 
 // Los gráficos (Recharts) pesan; se descargan solo cuando el administrador abre los reportes.
 const Reportes = lazy(() => import("./paginas/admin/Reportes"));
+const ReportesTienda = lazy(() => import("./paginas/vendedor/ReportesTienda"));
+const CierreCaja = lazy(() => import("./paginas/vendedor/CierreCaja"));
+
+const SECCIONES_VENDEDOR = [
+  { ruta: "/vendedor/pedidos", texto: "Pedidos Online" },
+  { ruta: "/vendedor/caja", texto: "Caja" },
+  { ruta: "/vendedor/inventario", texto: "Inventario" },
+  { ruta: "/vendedor/escaner", texto: "Escáner QR" },
+  { ruta: "/vendedor/historial", texto: "Historial de ventas" },
+  { ruta: "/vendedor/devoluciones", texto: "Devoluciones" },
+  { ruta: "/vendedor/reportes", texto: "Reportes" },
+  { ruta: "/vendedor/perfil", texto: "Mi perfil" },
+];
 
 const NOMBRE_ROL: Record<Rol, string> = { admin: "Administrador", vendedor: "Vendedor", cliente: "Cliente" };
 
@@ -56,12 +74,12 @@ function Inicio() {
   return <Catalogo />;
 }
 
-/** Buscador de la cabecera: lleva al catálogo con lo escrito. */
-function Buscador() {
+/** Buscador de la cabecera: lleva a la lista de productos (catálogo o inventario) con lo escrito. */
+function Buscador({ destino = "/catalogo" }: { destino?: string }) {
   const navegar = useNavigate();
   const { pathname } = useLocation();
   const [params] = useSearchParams();
-  const enCatalogo = pathname === "/catalogo";
+  const enCatalogo = pathname === destino;
   const [texto, setTexto] = useState("");
 
   // En el catálogo el buscador muestra lo que se está buscando.
@@ -71,7 +89,7 @@ function Buscador() {
   function buscar(evento: FormEvent) {
     evento.preventDefault();
     const q = texto.trim();
-    navegar(q ? `/catalogo?q=${encodeURIComponent(q)}` : "/catalogo");
+    navegar(q ? `${destino}?q=${encodeURIComponent(q)}` : destino);
   }
 
   return (
@@ -88,7 +106,7 @@ function Buscador() {
           aria-label="Borrar búsqueda"
           onClick={() => {
             setTexto("");
-            if (enCatalogo) navegar("/catalogo");
+            if (enCatalogo) navegar(destino);
           }}
         >
           <Icono nombre="cerrar" tamano={18} />
@@ -136,13 +154,7 @@ function MenuCuenta() {
       <summary className="cabecera-cuenta">
         <Icono nombre="usuario" tamano={22} />
         <span>
-          {esCliente ? "Mi cuenta" : usuario.nombre}
-          {!esCliente && (
-            <small>
-              {NOMBRE_ROL[usuario.rol]}
-              {usuario.tienda_nombre ? ` · ${usuario.tienda_nombre}` : ""}
-            </small>
-          )}
+          {esCliente ? "Mi cuenta" : usuario.rol === "admin" ? NOMBRE_ROL.admin : usuario.nombre}
         </span>
         <Icono nombre="abajo" tamano={16} />
       </summary>
@@ -163,6 +175,15 @@ function MenuCuenta() {
               <Icono nombre="usuario" /> Mis datos
             </Link>
           </>
+        ) : usuario.rol === "vendedor" ? (
+          <>
+            <Link to="/vendedor/perfil">
+              <Icono nombre="usuario" /> Mi perfil
+            </Link>
+            <Link to="/vendedor/caja/cierre">
+              <Icono nombre="registradora" /> Cierre de caja
+            </Link>
+          </>
         ) : (
           <Link to={RUTA_INICIO[usuario.rol]}>
             <Icono nombre="casa" /> Mi panel
@@ -173,6 +194,68 @@ function MenuCuenta() {
         </button>
       </div>
     </details>
+  );
+}
+
+const SECCIONES_ADMIN = [
+  { ruta: "/admin/tiendas", texto: "Tiendas" },
+  { ruta: "/admin/vendedores", texto: "Vendedores" },
+  { ruta: "/admin/productos", texto: "Catálogo" },
+  { ruta: "/admin/ofertas", texto: "Ofertas" },
+  { ruta: "/admin/categorias", texto: "Categorías" },
+  { ruta: "/admin/reportes", texto: "Reportes" },
+];
+
+/** Cabecera del personal: busca productos y muestra su tienda o el panel, en lugar de un carrito. */
+function CabeceraPersonal() {
+  const { usuario, salir } = useSesion();
+  const navegar = useNavigate();
+  const esAdmin = usuario?.rol === "admin";
+  const inicio = esAdmin ? "/admin" : "/vendedor";
+  const secciones = esAdmin ? SECCIONES_ADMIN : SECCIONES_VENDEDOR;
+
+  async function cerrarSesion() {
+    await salir();
+    navegar("/ingresar");
+  }
+
+  return (
+    <header className="cabecera">
+      <div className="cabecera-barra">
+        <Link to="/" className="marca" aria-label="Mass, ir al inicio">
+          <LogoMass tamano={30} />
+        </Link>
+        <Buscador destino={esAdmin ? "/admin/productos" : "/vendedor/inventario"} />
+        <div className="cabecera-acciones">
+          <Link to={esAdmin ? "/admin/tiendas" : "/vendedor/perfil"} className="cabecera-tienda">
+            <Icono nombre="ubicacion" tamano={22} />
+            <span>
+              <small>{esAdmin ? "Panel de administración" : "Mi tienda"}</small>
+              <strong>{esAdmin ? "Todas las tiendas" : usuario?.tienda_nombre}</strong>
+            </span>
+          </Link>
+          <span className="cabecera-separador" aria-hidden="true" />
+          <MenuCuenta />
+          <span className="cabecera-separador" aria-hidden="true" />
+          <button type="button" className="cabecera-salir" aria-label="Cerrar sesión" title="Cerrar sesión" onClick={cerrarSesion}>
+            <Icono nombre="salir" tamano={26} />
+          </button>
+        </div>
+      </div>
+      <nav className={`cabecera-nav${esAdmin ? " con-separadores" : ""}`} aria-label={esAdmin ? "Administración" : "Mi tienda"}>
+        <NavLink to={inicio} end aria-label="Inicio">
+          <Icono nombre="casa" />
+        </NavLink>
+        <NavLink to={inicio} end>
+          Inicio
+        </NavLink>
+        {secciones.map((s) => (
+          <NavLink key={s.ruta} to={s.ruta}>
+            {s.texto}
+          </NavLink>
+        ))}
+      </nav>
+    </header>
   );
 }
 
@@ -238,13 +321,16 @@ function TiendaPreferida() {
 }
 
 export default function App() {
+  const { usuario } = useSesion();
+  const esPersonal = usuario !== null && usuario.rol !== "cliente";
+  const pie = usuario?.rol === "admin" ? "Tiendas Mass · Sistema de administración" : usuario?.rol === "vendedor" ? "Tiendas Mass · Sistema para vendedores" : "Tienda Online Mass · Prototipo académico";
   return (
     <>
       <a href="#contenido" className="saltar">
         Saltar al contenido
       </a>
       <TiendaPreferida />
-      <Cabecera />
+      {esPersonal ? <CabeceraPersonal /> : <Cabecera />}
       <main id="contenido">
         <Routes>
           <Route path="/" element={<Inicio />} />
@@ -279,7 +365,7 @@ export default function App() {
               </SoloRol>
             }
           >
-            <Route index element={<InicioRol rol="admin" />} />
+            <Route index element={<InicioAdmin />} />
             <Route path="tiendas" element={<Tiendas />} />
             <Route path="vendedores" element={<Vendedores />} />
             <Route path="productos" element={<Productos />} />
@@ -302,10 +388,30 @@ export default function App() {
               </SoloRol>
             }
           >
-            <Route index element={<InicioRol rol="vendedor" />} />
+            <Route index element={<InicioVendedor />} />
             <Route path="pedidos" element={<PedidosTienda />} />
             <Route path="caja" element={<Caja />} />
+            <Route
+              path="caja/cierre"
+              element={
+                <Suspense fallback={<p className="estado">Cargando el turno…</p>}>
+                  <CierreCaja />
+                </Suspense>
+              }
+            />
             <Route path="inventario" element={<Inventario />} />
+            <Route path="escaner" element={<Escaner />} />
+            <Route path="historial" element={<HistorialVentas />} />
+            <Route path="devoluciones" element={<Devoluciones />} />
+            <Route
+              path="reportes"
+              element={
+                <Suspense fallback={<p className="estado">Cargando reportes…</p>}>
+                  <ReportesTienda />
+                </Suspense>
+              }
+            />
+            <Route path="perfil" element={<MiPerfil />} />
           </Route>
           <Route
             path="/cliente"
@@ -326,7 +432,7 @@ export default function App() {
       </main>
       <footer className="pie">
         <p className="pie-linea">
-          <span>Tienda Online Mass · Prototipo académico</span>
+          <span>{pie}</span>
         </p>
         <p>
           Datos simulados, presentado como propuesta a Tiendas Mass (InRetail). No es el sitio oficial de Mass.

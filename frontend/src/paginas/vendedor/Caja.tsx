@@ -1,375 +1,368 @@
-import { useEffect, useRef, useState } from "react";
-import { api, conFiltros } from "../../api";
-import Campo from "../../componentes/Campo";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router";
+import { api, conFiltros, ErrorApi, post } from "../../api";
+import { useSesion } from "../../auth";
+import Cantidad from "../../componentes/Cantidad";
+import Comprobante, { imprimirComprobante, type FormatoComprobante } from "../../componentes/Comprobante";
 import Dialogo from "../../componentes/Dialogo";
-import EscanerQR from "../../componentes/EscanerQR";
-import type { ItemVenta, MedioPago, Paginado, Producto } from "../../tipos";
+import EncabezadoPagina from "../../componentes/EncabezadoPagina";
+import FotoProducto from "../../componentes/FotoProducto";
+import Icono from "../../componentes/Icono";
+import Paginacion from "../../componentes/Paginacion";
+import { igvIncluido, soles } from "../../formato";
+import { MEDIOS_PAGO } from "../../mediosPago";
+import type { Categoria, FilaInventario, MedioPago, Paginado, Producto, Venta } from "../../tipos";
 import { useCarga, useEnvio, useRetraso } from "../../useCarga";
+import { useVentaCaja } from "../../ventaCaja";
 
-/** HU12: registrar ventas en caja con búsqueda de productos y cálculo de vuelto. HU13: escanear códigos QR y USB. */
-export default function Caja() {
-  const [busqueda, setBusqueda] = useState("");
-  const q = useRetraso(busqueda);
-  const [items, setItems] = useState<ItemVenta[]>([]);
-  const [medioPago, setMedioPago] = useState<MedioPago>("efectivo");
-  const [montoRecibido, setMontoRecibido] = useState("");
-  const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
-  const [ventaReciente, setVentaReciente] = useState<any>(null);
-  const [escanerAbierto, setEscanerAbierto] = useState(false);
-  const teclasRef = useRef<string[]>([]);
-  const tiempoTeclasRef = useRef<number>(0);
+const POR_PAGINA = 8;
 
-  const { datos: productos } = useCarga<Paginado<Producto>>(
-    q ? conFiltros("/productos/productos/", { q, page_size: 10 }) : null
-  );
-
+function ProcesarPago({ alTerminar }: { alTerminar: (venta: Venta) => void }) {
+  const { items, total } = useVentaCaja();
+  const [medio, setMedio] = useState<MedioPago>("efectivo");
+  const [recibido, setRecibido] = useState("");
   const { errores, general, enviando, enviar } = useEnvio();
+  const monto = Number(recibido);
+  const falta = medio === "efectivo" && monto < total;
 
-  const total = items.reduce((sum, item) => {
-    const producto = productos?.results?.find((p) => p.id === item.producto);
-    return sum + (producto ? producto.precio_final * item.cantidad : 0);
-  }, 0);
-
-  const vuelto = medioPago === "efectivo" && montoRecibido ? Math.max(0, parseFloat(montoRecibido) - total) : 0;
-
-  function agregarProducto(producto: Producto) {
-    const existente = items.find((i) => i.producto === producto.id);
-    if (existente) {
-      setItems(items.map((i) => (i.producto === producto.id ? { ...i, cantidad: i.cantidad + 1 } : i)));
-    } else {
-      setItems([...items, { producto: producto.id, cantidad: 1 }]);
-    }
-    setBusqueda("");
-  }
-
-  function cambiarCantidad(productoId: number, delta: number) {
-    setItems(
-      items
-        .map((i) => {
-          if (i.producto === productoId) {
-            const nuevaCantidad = Math.max(1, i.cantidad + delta);
-            return nuevaCantidad > 0 ? { ...i, cantidad: nuevaCantidad } : null;
-          }
-          return i;
-        })
-        .filter((i): i is ItemVenta => i !== null)
-    );
-  }
-
-  function quitarProducto(productoId: number) {
-    setItems(items.filter((i) => i.producto !== productoId));
-  }
-
-  async function confirmarVenta() {
+  async function cobrar() {
     await enviar(async () => {
-      const respuesta = await api("/ventas/ventas/crear/", {
-        method: "POST",
-        body: JSON.stringify({
-          medio_pago: medioPago,
-          monto_recibido: medioPago === "efectivo" ? montoRecibido : null,
-          items,
-        }),
+      const venta = await post<Venta>("/ventas/ventas/crear/", {
+        medio_pago: medio,
+        monto_recibido: medio === "efectivo" ? recibido : null,
+        items: items.map((i) => ({ producto: i.producto, cantidad: i.cantidad })),
       });
-      setVentaReciente(respuesta);
-      setItems([]);
-      setMontoRecibido("");
-      setMostrarConfirmar(false);
+      alTerminar(venta);
     });
   }
 
-  function nuevaVenta() {
-    setVentaReciente(null);
+  return (
+    <div className="procesar-pago">
+      <p className="total-cobrar">
+        <span>Total a cobrar</span>
+        <strong>{soles(total)}</strong>
+      </p>
+      {general && <p className="alerta" role="alert">{general}</p>}
+      <div className="opciones-pago" role="radiogroup" aria-label="Medio de pago">
+        {MEDIOS_PAGO.map((m) => (
+          <label key={m.valor} className={`opcion-pago${medio === m.valor ? " elegida" : ""}`}>
+            <input type="radio" name="medio_caja" checked={medio === m.valor} onChange={() => setMedio(m.valor)} />
+            <Icono nombre={m.icono} tamano={30} />
+            <strong>{m.titulo}</strong>
+          </label>
+        ))}
+      </div>
+      {medio === "efectivo" && (
+        <div className="campo">
+          <label htmlFor="monto-recibido">Monto recibido (S/)</label>
+          <input
+            id="monto-recibido"
+            type="number"
+            min="0"
+            step="0.10"
+            inputMode="decimal"
+            autoFocus
+            value={recibido}
+            onChange={(e) => setRecibido(e.target.value)}
+            aria-invalid={errores.monto_recibido ? true : undefined}
+          />
+          {errores.monto_recibido && <p className="error-campo">{errores.monto_recibido}</p>}
+          {recibido && !falta && <p className="vuelto">Vuelto: <strong>{soles(monto - total)}</strong></p>}
+        </div>
+      )}
+      <button type="button" className="boton-primario ancho grande" disabled={enviando || falta} onClick={cobrar}>
+        <Icono nombre="check" /> {enviando ? "Registrando…" : "Confirmar pago"}
+      </button>
+    </div>
+  );
+}
+
+/** HU12: registrar ventas en caja. HU13: también se agregan productos con un lector de códigos USB. */
+export default function Caja() {
+  const { usuario } = useSesion();
+  const { items, total, unidades, agregar, cambiarCantidad, limpiar } = useVentaCaja();
+  const [busqueda, setBusqueda] = useState("");
+  const q = useRetraso(busqueda.trim());
+  const [categoria, setCategoria] = useState<number | "">("");
+  const [pagina, setPagina] = useState(1);
+  const [cobrando, setCobrando] = useState(false);
+  const [venta, setVenta] = useState<Venta | null>(null);
+  // La última venta se puede volver a imprimir mientras se atiende al siguiente cliente.
+  const [ultima, setUltima] = useState<Venta | null>(null);
+  const [formato, setFormato] = useState<FormatoComprobante>("ticket");
+  const [aviso, setAviso] = useState("");
+
+  const { datos: categorias } = useCarga<Categoria[]>("/categorias/categorias/");
+  const { datos: productos, cargando, error } = useCarga<Paginado<Producto>>(
+    conFiltros("/productos/productos/", { q, categoria, tienda: usuario?.tienda ?? undefined, page: pagina, page_size: POR_PAGINA }),
+  );
+
+  function agregarProducto(p: Producto) {
+    agregar({ producto: p.id, nombre: p.nombre, foto: p.foto, precio: p.precio_final, disponible: p.disponible ?? 0 });
   }
 
-  // Detección de escáner USB (actúa como teclado rápido)
-  useEffect(() => {
-    function manejarKeyDown(evento: KeyboardEvent) {
-      const ahora = Date.now();
-      
-      // Si el campo de búsqueda tiene foco, no procesar como escáner USB
-      if (document.activeElement instanceof HTMLInputElement && document.activeElement.type === "search") {
-        return;
-      }
-
-      // Si no teclas en los últimos 100ms, reiniciar buffer
-      if (ahora - tiempoTeclasRef.current > 100) {
-        teclasRef.current = [];
-      }
-      
-      tiempoTeclasRef.current = ahora;
-      
-      if (evento.key === "Enter") {
-        // Si hay teclas acumuladas, es probablemente un escáner USB
-        if (teclasRef.current.length > 0) {
-          const codigo = teclasRef.current.join("");
-          teclasRef.current = [];
-          evento.preventDefault();
-          manejarEscanear(codigo);
+  const agregarPorCodigo = useCallback(
+    async (codigo: string) => {
+      try {
+        const fila = await api<FilaInventario>(conFiltros("/inventario/inventario/consulta/", { codigo }));
+        if (fila.cantidad === 0) {
+          setAviso(`${fila.nombre} está agotado en tu tienda.`);
+          return;
         }
+        agregar({ producto: fila.producto, nombre: fila.nombre, foto: fila.foto, precio: fila.precio_final, disponible: fila.cantidad });
+        setAviso(`Agregado: ${fila.nombre}.`);
+      } catch (e) {
+        setAviso(e instanceof ErrorApi && e.estado === 404 ? `No hay ningún producto con el código ${codigo}.` : "No se pudo leer el código.");
+      }
+    },
+    [agregar],
+  );
+
+  // Un lector USB escribe como un teclado muy rápido y termina con Enter.
+  const teclas = useRef({ texto: "", ultima: 0 });
+  useEffect(() => {
+    function alTeclear(evento: KeyboardEvent) {
+      const objetivo = evento.target as HTMLElement;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(objetivo.tagName) || objetivo.closest("dialog")) return;
+      const ahora = Date.now();
+      if (ahora - teclas.current.ultima > 100) teclas.current.texto = "";
+      teclas.current.ultima = ahora;
+      if (evento.key === "Enter" && teclas.current.texto.length >= 8) {
+        evento.preventDefault();
+        void agregarPorCodigo(teclas.current.texto);
+        teclas.current.texto = "";
       } else if (evento.key.length === 1) {
-        // Acumular teclas (solo caracteres imprimibles)
-        teclasRef.current.push(evento.key);
+        teclas.current.texto += evento.key;
       }
     }
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [agregarPorCodigo]);
 
-    window.addEventListener("keydown", manejarKeyDown);
-    return () => window.removeEventListener("keydown", manejarKeyDown);
-  }, []);
-
-  async function buscarPorCodigoBarras(codigo: string) {
-    try {
-      const respuesta = await api<Paginado<Producto>>(
-        conFiltros("/productos/productos/", { codigo_barras: codigo, page_size: 1 })
-      );
-      return respuesta.results?.[0] || null;
-    } catch (error) {
-      console.error("Error al buscar por código de barras:", error);
-      return null;
-    }
+  function imprimir(nuevo: FormatoComprobante) {
+    setFormato(nuevo);
+    imprimirComprobante();
   }
 
-  async function manejarEscanear(codigo: string) {
-    const producto = await buscarPorCodigoBarras(codigo);
-    if (producto) {
-      agregarProducto(producto);
-    } else {
-      alert("Código no encontrado en el catálogo. Por favor, busca el producto por nombre.");
-      setBusqueda(codigo);
-      // Cerrar el escáner y poner foco en el campo de búsqueda
-      setEscanerAbierto(false);
-      setTimeout(() => {
-        const input = document.querySelector('input[type="search"]') as HTMLInputElement;
-        if (input) input.focus();
-      }, 100);
-    }
+  function terminarVenta(registrada: Venta) {
+    setVenta(registrada);
+    setUltima(registrada);
+    setCobrando(false);
+    limpiar();
   }
 
   return (
-    <section>
-      <div className="barra-titulo">
-        <div>
-          <h1>Caja</h1>
-          <p className="subtitulo">Registrar ventas en tienda para clientes presenciales.</p>
+    <section className="pagina-caja">
+      <div className="caja-catalogo">
+        <EncabezadoPagina icono="registradora" titulo="Caja" subtitulo="Registra ventas presenciales en tu tienda.">
+          <Link to="/vendedor/escaner" className="boton-contorno">
+            <Icono nombre="qr" /> Escanear
+          </Link>
+          <Link to="/vendedor/caja/cierre" className="boton-contorno">
+            <Icono nombre="calculadora" /> Cierre de caja
+          </Link>
+        </EncabezadoPagina>
+
+        <form
+          className="buscador buscador-pagina"
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            // Un código completo escrito a mano o con el lector se agrega directo.
+            if (/^\d{8,14}$/.test(busqueda.trim())) {
+              void agregarPorCodigo(busqueda.trim());
+              setBusqueda("");
+            }
+          }}
+        >
+          <Icono nombre="buscar" />
+          <label htmlFor="buscar-caja" className="solo-lector">
+            Buscar productos por nombre o código
+          </label>
+          <input
+            id="buscar-caja"
+            type="search"
+            placeholder="Buscar productos por nombre o código…"
+            value={busqueda}
+            onChange={(e) => {
+              setBusqueda(e.target.value);
+              setPagina(1);
+            }}
+          />
+        </form>
+
+        <div className="chips-categorias" role="group" aria-label="Categoría">
+          <button
+            type="button"
+            className={`chip-amarillo${categoria === "" ? " activo" : ""}`}
+            aria-pressed={categoria === ""}
+            onClick={() => {
+              setCategoria("");
+              setPagina(1);
+            }}
+          >
+            Todos
+          </button>
+          {categorias?.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className={`chip-amarillo${categoria === c.id ? " activo" : ""}`}
+              aria-pressed={categoria === c.id}
+              onClick={() => {
+                setCategoria(c.id);
+                setPagina(1);
+              }}
+            >
+              {c.nombre}
+            </button>
+          ))}
+        </div>
+
+        {aviso && <p className="aviso" role="status">{aviso}</p>}
+        {error && <p className="alerta" role="alert">{error}</p>}
+        {cargando && !productos ? (
+          <p className="estado">Cargando productos…</p>
+        ) : productos?.results.length === 0 ? (
+          <p className="estado">No encontramos productos con esa búsqueda.</p>
+        ) : (
+          <div className="grilla-caja" aria-busy={cargando}>
+            {productos?.results.map((p) => {
+              const hay = p.disponible ?? 0;
+              return (
+                <article key={p.id} className="tarjeta producto-caja">
+                  <FotoProducto producto={p} tamano={84} />
+                  <h3>{p.nombre}</h3>
+                  <small className="dato-secundario">{p.marca}</small>
+                  <strong>{soles(p.precio_final)}</strong>
+                  <button type="button" className="boton-contorno pequeno" disabled={hay === 0} onClick={() => agregarProducto(p)}>
+                    <Icono nombre="carrito" tamano={18} /> {hay === 0 ? "Agotado" : "Agregar"}
+                    <span className="solo-lector"> {p.nombre}</span>
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        )}
+        <Paginacion pagina={pagina} total={productos?.count ?? 0} porPagina={POR_PAGINA} alCambiar={setPagina} />
+
+        <div className="acciones-impresion caja-impresion">
+          <button type="button" className="boton-contorno grande" disabled={!ultima} onClick={() => imprimir("boleta")}>
+            <Icono nombre="imprimir" /> Imprimir boleta
+          </button>
+          <button type="button" className="boton-contorno grande" disabled={!ultima} onClick={() => imprimir("ticket")}>
+            <Icono nombre="documento" /> Imprimir ticket
+          </button>
         </div>
       </div>
 
-      {ventaReciente ? (
-        <div className="tarjeta texto-centro">
-          <h2 className="exito">¡Venta registrada!</h2>
-          <p>
-            <strong>Ticket:</strong> {ventaReciente.numero_ticket}
-          </p>
-          <p>
-            <strong>Total:</strong> S/ {ventaReciente.total.toFixed(2)}
-          </p>
-          {ventaReciente.vuelto !== null && ventaReciente.vuelto > 0 && (
-            <p>
-              <strong>Vuelto:</strong> S/ {ventaReciente.vuelto.toFixed(2)}
-            </p>
-          )}
-          <button type="button" className="boton" onClick={nuevaVenta}>
-            Nueva venta
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="filtros campo-con-escaner">
-            <Campo
-              etiqueta="Buscar producto (código o nombre)"
-              type="search"
-              placeholder="Arroz, leche, código de barras…"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              autoFocus
-            />
-            <button
-              type="button"
-              className="boton-escaner"
-              onClick={() => setEscanerAbierto(true)}
-              aria-label="Escanear código QR"
-              title="Escanear código QR"
-            >
-              📷
+      <aside className="caja-venta">
+        <div className="tarjeta venta-actual">
+          <div className="venta-actual-titulo">
+            <h2 className="con-icono">
+              <Icono nombre="carrito" tamano={30} /> Venta actual
+            </h2>
+            <button type="button" className="boton-contorno pequeno" disabled={items.length === 0} onClick={limpiar}>
+              <Icono nombre="basura" tamano={18} /> Limpiar venta
             </button>
           </div>
 
-          {productos && productos.results && productos.results.length > 0 && (
-            <ul className="resultados-busqueda">
-              {productos.results.map((p) => (
-                <li key={p.id}>
-                  <button type="button" onClick={() => agregarProducto(p)}>
-                    <span className="producto-celda">
-                      {p.foto ? (
-                        <img src={p.foto} alt="" className="foto-producto" width="40" height="40" />
-                      ) : (
-                        <div className="foto-producto vacia" style={{ width: 40, height: 40 }}>
-                          {p.nombre[0]}
-                        </div>
-                      )}
-                      <div>
-                        <strong>{p.nombre}</strong>
-                        <br />
-                        <small>{p.marca}</small>
-                      </div>
-                    </span>
-                    <span>S/ {p.precio_final.toFixed(2)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {items.length > 0 && (
-            <div className="carrito">
-              <div className="lineas-carrito">
-                {items.map((item) => {
-                  const producto = productos?.results?.find((p) => p.id === item.producto);
-                  if (!producto) return null;
-                  return (
-                    <li key={item.producto} className="linea-carrito">
+          {items.length === 0 ? (
+            <p className="venta-vacia">Agrega productos o escanea un código para empezar.</p>
+          ) : (
+            <table className="tabla-venta">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
+                  <th className="numero">Precio unit.</th>
+                  <th className="numero">Subtotal</th>
+                  <th><span className="solo-lector">Quitar</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((i) => (
+                  <tr key={i.producto} className="fila-entrando">
+                    <td>
                       <span className="producto-celda">
-                        {producto.foto ? (
-                          <img src={producto.foto} alt="" className="foto-producto" width="50" height="50" />
-                        ) : (
-                          <div className="foto-producto vacia" style={{ width: 50, height: 50 }}>
-                            {producto.nombre[0]}
-                          </div>
-                        )}
-                        <div>
-                          <strong>{producto.nombre}</strong>
-                          <br />
-                          <small>{producto.marca}</small>
-                        </div>
+                        <FotoProducto producto={i} tamano={40} />
+                        {i.nombre}
                       </span>
-                      <div className="linea-acciones">
-                        <div className="cantidad">
-                          <button type="button" onClick={() => cambiarCantidad(item.producto, -1)}>
-                            −
-                          </button>
-                          <output>{item.cantidad}</output>
-                          <button type="button" onClick={() => cambiarCantidad(item.producto, 1)}>
-                            +
-                          </button>
-                        </div>
-                        <div className="linea-subtotal">
-                          <strong>S/ {(producto.precio_final * item.cantidad).toFixed(2)}</strong>
-                        </div>
-                        <button
-                          type="button"
-                          className="enlace peligro"
-                          onClick={() => quitarProducto(item.producto)}
-                        >
-                          Quitar
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </div>
+                    </td>
+                    <td>
+                      <Cantidad valor={i.cantidad} maximo={i.disponible} nombre={i.nombre} alCambiar={(c) => cambiarCantidad(i.producto, c)} />
+                    </td>
+                    <td className="numero">{soles(i.precio)}</td>
+                    <td className="numero">{soles(i.precio * i.cantidad)}</td>
+                    <td>
+                      <button type="button" className="boton-papelera" aria-label={`Quitar ${i.nombre}`} onClick={() => cambiarCantidad(i.producto, 0)}>
+                        <Icono nombre="basura" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
 
-              <div className="resumen tarjeta">
-                <h2>Resumen de venta</h2>
-                <div className="totales">
-                  <div>
-                    <dt>Subtotal</dt>
-                    <dd>S/ {total.toFixed(2)}</dd>
-                  </div>
-                  <div className="total">
-                    <dt>Total a pagar</dt>
-                    <dd>S/ {total.toFixed(2)}</dd>
-                  </div>
-                </div>
-
-                <div className="campo">
-                  <label>Medio de pago</label>
-                  <select value={medioPago} onChange={(e) => setMedioPago(e.target.value as MedioPago)}>
-                    <option value="efectivo">Efectivo</option>
-                    <option value="tarjeta">Tarjeta</option>
-                    <option value="yape_plin">Yape/Plin</option>
-                  </select>
-                </div>
-
-                {medioPago === "efectivo" && (
-                  <Campo
-                    etiqueta="Monto recibido"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={montoRecibido}
-                    onChange={(e) => setMontoRecibido(e.target.value)}
-                    error={errores.monto_recibido}
-                  />
-                )}
-
-                {medioPago === "efectivo" && montoRecibido && vuelto > 0 && (
-                  <p className="aviso">
-                    <strong>Vuelto: S/ {vuelto.toFixed(2)}</strong>
-                  </p>
-                )}
-
-                {general && <p className="alerta">{general}</p>}
-
-                <button
-                  type="button"
-                  className="boton ancho"
-                  onClick={() => setMostrarConfirmar(true)}
-                  disabled={items.length === 0 || (medioPago === "efectivo" && !montoRecibido)}
-                >
-                  Confirmar venta
-                </button>
-              </div>
+          <dl className="totales-venta">
+            <div>
+              <dt>Subtotal ({unidades} productos):</dt>
+              <dd>{soles(total)}</dd>
             </div>
-          )}
+            <div>
+              <dt>IGV (18 %) incluido:</dt>
+              <dd>{soles(igvIncluido(total))}</dd>
+            </div>
+            <div className="total">
+              <dt>Total:</dt>
+              <dd aria-live="polite">{soles(total)}</dd>
+            </div>
+          </dl>
+        </div>
 
-          {items.length === 0 && (
-            <p className="estado texto-centro">
-              Agrega productos para comenzar la venta.
+        <button type="button" className="boton-primario ancho procesar" disabled={items.length === 0} onClick={() => setCobrando(true)}>
+          <Icono nombre="tarjeta" tamano={28} /> Procesar pago
+        </button>
+      </aside>
+
+      <Dialogo titulo="Procesar pago" abierto={cobrando} alCerrar={() => setCobrando(false)}>
+        <ProcesarPago alTerminar={terminarVenta} />
+      </Dialogo>
+
+      <Dialogo titulo="Venta registrada" abierto={venta !== null} alCerrar={() => setVenta(null)}>
+        {venta && (
+          <div className="venta-registrada">
+            <span className="check-animado" aria-hidden="true">
+              <Icono nombre="check" tamano={40} />
+            </span>
+            <p>
+              Ticket <strong>{venta.numero_ticket}</strong>
             </p>
-          )}
-
-          {mostrarConfirmar && (
-            <Dialogo titulo="Confirmar venta" abierto={mostrarConfirmar} alCerrar={() => setMostrarConfirmar(false)}>
-              <p>
-                <strong>Total:</strong> S/ {total.toFixed(2)}
+            <p className="total-cobrar">
+              <span>Total</span>
+              <strong>{soles(venta.total)}</strong>
+            </p>
+            {venta.vuelto != null && (
+              <p className="vuelto grande">
+                Vuelto: <strong>{soles(venta.vuelto)}</strong>
               </p>
-              <p>
-                <strong>Medio de pago:</strong> {medioPago === "efectivo" ? "Efectivo" : medioPago === "tarjeta" ? "Tarjeta" : "Yape/Plin"}
-              </p>
-              {medioPago === "efectivo" && (
-                <p>
-                  <strong>Monto recibido:</strong> S/ {parseFloat(montoRecibido).toFixed(2)}
-                </p>
-              )}
-              {medioPago === "efectivo" && vuelto > 0 && (
-                <p>
-                  <strong>Vuelto:</strong> S/ {vuelto.toFixed(2)}
-                </p>
-              )}
-              <p>¿Confirmar la venta?</p>
-              <div className="acciones-dialogo">
-                <button
-                  type="button"
-                  className="boton secundario"
-                  onClick={() => setMostrarConfirmar(false)}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="boton"
-                  onClick={confirmarVenta}
-                  disabled={enviando}
-                >
-                  {enviando ? "Procesando…" : "Confirmar"}
-                </button>
-              </div>
-            </Dialogo>
-          )}
-
-          <EscanerQR abierto={escanerAbierto} alCerrar={() => setEscanerAbierto(false)} alEscanear={manejarEscanear} />
-        </>
-      )}
+            )}
+            <div className="acciones-impresion">
+              <button type="button" className="boton-contorno" onClick={() => imprimir("boleta")}>
+                <Icono nombre="imprimir" /> Imprimir boleta
+              </button>
+              <button type="button" className="boton-contorno" onClick={() => imprimir("ticket")}>
+                <Icono nombre="documento" /> Imprimir ticket
+              </button>
+            </div>
+            <button type="button" className="boton-primario ancho" onClick={() => setVenta(null)}>
+              Nueva venta
+            </button>
+          </div>
+        )}
+      </Dialogo>
+      {ultima && <Comprobante venta={ultima} formato={formato} />}
     </section>
   );
 }
