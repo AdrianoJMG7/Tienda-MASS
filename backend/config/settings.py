@@ -5,10 +5,11 @@ from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-from dotenv import load_dotenv
 load_dotenv(BASE_DIR / ".env")
+
 
 def env_list(nombre, por_defecto=""):
     return [v.strip() for v in os.environ.get(nombre, por_defecto).split(",") if v.strip()]
@@ -70,21 +71,30 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# SQLite en desarrollo; en producción se define DATABASE_URL (PostgreSQL en Neon).
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "neondb"),
-        "USER": os.environ.get("DB_USER", "postgres"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
-        "OPTIONS": {
-            "sslmode": os.environ.get("DB_SSLMODE", "require"),
-            "options": f"-c search_path={os.environ.get('DB_SCHEMA', 'public')},public",
-        },
+# PostgreSQL (Neon) cuando se define DB_HOST; si no, SQLite para programar y probar sin tocar la base real.
+if os.environ.get("DB_HOST"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("DB_NAME", "neondb"),
+            "USER": os.environ.get("DB_USER", "postgres"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+            "HOST": os.environ["DB_HOST"],
+            "PORT": os.environ.get("DB_PORT", "5432"),
+            "OPTIONS": {
+                "sslmode": os.environ.get("DB_SSLMODE", "require"),
+                "options": f"-c search_path={os.environ.get('DB_SCHEMA', 'public')},public",
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default="sqlite:///" + str(BASE_DIR / "db.sqlite3"),
+            conn_max_age=600,
+        )
+    }
+
 AUTH_USER_MODEL = "usuarios.Usuario"
 
 PASSWORD_HASHERS = [
