@@ -237,7 +237,7 @@ export default function Productos() {
         <p className="estado">Cargando productos…</p>
       ) : (
         <div className="tarjeta contenedor-tabla">
-          <table className="tabla tabla-vendedor" aria-busy={cargando}>
+          <table className="tabla tabla-vendedor tabla-productos" aria-busy={cargando}>
             <thead>
               <tr>
                 <th>Producto</th>
@@ -270,12 +270,12 @@ export default function Productos() {
                   <td data-titulo="Costo (S/)">{p.costo != null ? soles(p.costo) : "—"}</td>
                   <td data-titulo="Precio (S/)">
                     {p.precio_oferta != null ? (
-                      <>
+                      <span className="precio-celda">
                         <strong className="precio-oferta">{soles(p.precio_oferta)}</strong>
                         <small className="dato-secundario">
                           <s>{soles(p.precio)}</s> hasta {formatoFecha(p.oferta_fin!)}
                         </small>
-                      </>
+                      </span>
                     ) : (
                       soles(p.precio)
                     )}
@@ -286,7 +286,7 @@ export default function Productos() {
                       <i aria-hidden="true" /> {p.activo ? "Activo" : "Inactivo"}
                     </span>
                   </td>
-                  <td data-titulo="Acciones">
+                  <td className="acciones" data-titulo="Acciones">
                     <div className="acciones-fila">
                       <button type="button" className="boton-contorno pequeno" onClick={() => setEditando(p)}>
                         <Icono nombre="lapiz" tamano={18} /> Editar<span className="solo-lector"> {p.nombre}</span>

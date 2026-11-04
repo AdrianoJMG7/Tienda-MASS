@@ -126,24 +126,24 @@ class InicioView(APIView):
         menu = []
         if rol == "admin":
             menu = [
-                {"clave": "tiendas", "titulo": "Tiendas", "hu": "HU04", "disponible": True, "ruta": "/admin/tiendas"},
-                {"clave": "vendedores", "titulo": "Vendedores", "hu": "HU04", "disponible": True, "ruta": "/admin/vendedores"},
-                {"clave": "productos", "titulo": "Catálogo y precios", "hu": "HU05", "disponible": True, "ruta": "/admin/productos"},
-                {"clave": "ofertas", "titulo": "Ofertas", "hu": "HU05", "disponible": True, "ruta": "/admin/ofertas"},
-                {"clave": "categorias", "titulo": "Categorías", "hu": "HU05", "disponible": True, "ruta": "/admin/categorias"},
-                {"clave": "reportes", "titulo": "Reportes", "hu": "HU16", "disponible": True, "ruta": "/admin/reportes"},
+                {"clave": "tiendas", "titulo": "Tiendas", "disponible": True, "ruta": "/admin/tiendas"},
+                {"clave": "vendedores", "titulo": "Vendedores", "disponible": True, "ruta": "/admin/vendedores"},
+                {"clave": "productos", "titulo": "Catálogo y precios", "disponible": True, "ruta": "/admin/productos"},
+                {"clave": "ofertas", "titulo": "Ofertas", "disponible": True, "ruta": "/admin/ofertas"},
+                {"clave": "categorias", "titulo": "Categorías", "disponible": True, "ruta": "/admin/categorias"},
+                {"clave": "reportes", "titulo": "Reportes", "disponible": True, "ruta": "/admin/reportes"},
             ]
         elif rol == "vendedor":
             menu = [
-                {"clave": "pedidos", "titulo": "Pedidos online", "hu": "HU10", "disponible": True, "ruta": "/vendedor/pedidos"},
-                {"clave": "caja", "titulo": "Caja", "hu": "HU12", "disponible": True, "ruta": "/vendedor/caja"},
-                {"clave": "inventario", "titulo": "Inventario", "hu": "HU14", "disponible": True, "ruta": "/vendedor/inventario"},
+                {"clave": "pedidos", "titulo": "Pedidos online", "disponible": True, "ruta": "/vendedor/pedidos"},
+                {"clave": "caja", "titulo": "Caja", "disponible": True, "ruta": "/vendedor/caja"},
+                {"clave": "inventario", "titulo": "Inventario", "disponible": True, "ruta": "/vendedor/inventario"},
             ]
         elif rol == "cliente":
             menu = [
-                {"clave": "catalogo", "titulo": "Catálogo", "hu": "HU06", "disponible": True, "ruta": "/catalogo"},
-                {"clave": "carrito", "titulo": "Mi carrito", "hu": "HU07", "disponible": True, "ruta": "/carrito"},
-                {"clave": "pedidos", "titulo": "Mis pedidos", "hu": "HU11", "disponible": True, "ruta": "/cliente/pedidos"},
+                {"clave": "catalogo", "titulo": "Catálogo", "disponible": True, "ruta": "/catalogo"},
+                {"clave": "carrito", "titulo": "Mi carrito", "disponible": True, "ruta": "/carrito"},
+                {"clave": "pedidos", "titulo": "Mis pedidos", "disponible": True, "ruta": "/cliente/pedidos"},
             ]
 
         return Response({

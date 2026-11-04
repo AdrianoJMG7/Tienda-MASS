@@ -4,7 +4,7 @@ import Icono, { type NombreIcono } from "../../componentes/Icono";
 import { useCarga } from "../../useCarga";
 
 interface Inicio {
-  menu: { clave: string; titulo: string; hu: string; disponible?: boolean; ruta?: string }[];
+  menu: { clave: string; titulo: string; disponible?: boolean; ruta?: string }[];
 }
 
 const DETALLE: Record<string, { icono: NombreIcono; texto: string }> = {
@@ -43,7 +43,6 @@ export default function InicioAdmin() {
           const detalle = DETALLE[opcion.clave];
           return (
             <li key={opcion.clave} className="tarjeta acceso-admin">
-              <span className="etiqueta-hu">{opcion.hu}</span>
               <div className="acceso-admin-cuerpo">
                 <span className="acceso-icono">
                   <Icono nombre={detalle?.icono ?? "caja"} tamano={60} />

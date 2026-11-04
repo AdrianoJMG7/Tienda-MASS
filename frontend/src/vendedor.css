@@ -371,6 +371,98 @@ dialog.dialogo.lateral[open] {
   flex-direction: column;
 }
 
+/* Estilos específicos para la tabla de productos del administrador */
+.tabla.tabla-vendedor.tabla-productos td {
+  vertical-align: middle;
+}
+
+.tabla.tabla-vendedor.tabla-productos .producto-celda > span strong {
+  margin-bottom: 4px;
+}
+
+.tabla.tabla-vendedor.tabla-productos .producto-celda > span small {
+  line-height: 1.4;
+}
+
+.tabla.tabla-vendedor.tabla-productos .precio-celda {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.tabla.tabla-vendedor.tabla-productos .acciones-fila {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+@media (min-width: 768px) {
+  /* Celdas y encabezados más compactos */
+  .tabla.tabla-vendedor.tabla-productos th,
+  .tabla.tabla-vendedor.tabla-productos td {
+    padding: 10px 8px;
+    font-size: 0.85rem;
+  }
+
+  .tabla.tabla-vendedor.tabla-productos th {
+    font-size: 0.8rem;
+  }
+
+  /* Acciones en una sola línea, botones pequeños */
+  .tabla.tabla-vendedor.tabla-productos .acciones-fila {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .tabla.tabla-vendedor.tabla-productos .acciones-fila button,
+  .tabla.tabla-vendedor.tabla-productos .acciones-fila a {
+    padding: 5px 9px;
+    font-size: 0.78rem;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .tabla.tabla-vendedor.tabla-productos .acciones-fila svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Botón circular del historial más chico */
+  .tabla.tabla-vendedor.tabla-productos .acciones-fila .boton-icono,
+  .tabla.tabla-vendedor.tabla-productos .acciones-fila button:last-child {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  /* Avatar "A" y nombre del producto más chicos */
+  .tabla.tabla-vendedor.tabla-productos .producto-celda {
+    gap: 8px;
+  }
+
+  .tabla.tabla-vendedor.tabla-productos .producto-celda > span strong {
+    font-size: 0.85rem;
+  }
+
+  .tabla.tabla-vendedor.tabla-productos .producto-celda > span small {
+    font-size: 0.72rem;
+  }
+
+  /* Badge de estado compacto */
+  .tabla.tabla-vendedor.tabla-productos .etiqueta,
+  .tabla.tabla-vendedor.tabla-productos [class*="estado"] {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+  }
+
+  /* El precio tachado no se parte en dos líneas */
+  .tabla.tabla-vendedor.tabla-productos .precio-celda .dato-secundario {
+    white-space: nowrap;
+    font-size: 0.72rem;
+  }
+}
+
 .fila-elegida {
   background: var(--azul-fondo);
 }
@@ -583,17 +675,6 @@ dialog.dialogo.lateral[open] {
   border-radius: 50%;
   background: var(--azul-claro);
   color: var(--azul);
-}
-
-.etiqueta-hu {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  padding: 4px 14px;
-  border-radius: 999px;
-  background: var(--amarillo-claro);
-  color: var(--azul-oscuro);
-  font-weight: 700;
 }
 
 /* ---------- Pedidos Online ---------- */
