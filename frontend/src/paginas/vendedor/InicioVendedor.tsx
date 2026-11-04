@@ -6,7 +6,7 @@ import { useCarga } from "../../useCarga";
 
 interface Inicio {
   saludo: string;
-  menu: { clave: string; titulo: string; hu: string; disponible?: boolean; ruta?: string }[];
+  menu: { clave: string; titulo: string; disponible?: boolean; ruta?: string }[];
 }
 
 const DETALLE: Record<string, { icono: NombreIcono; texto: string }> = {
@@ -51,7 +51,6 @@ export default function InicioVendedor() {
           const detalle = DETALLE[opcion.clave];
           return (
             <li key={opcion.clave} className="tarjeta acceso-vendedor">
-              <span className="etiqueta-hu">{opcion.hu}</span>
               <span className="acceso-icono">
                 <Icono nombre={detalle?.icono ?? "caja"} tamano={72} />
               </span>
