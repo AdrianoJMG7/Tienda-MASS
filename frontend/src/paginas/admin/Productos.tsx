@@ -20,6 +20,7 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
   const [datos, setDatos] = useState({
     nombre: producto?.nombre ?? "",
     marca: producto?.marca ?? "",
+    descripcion: producto?.descripcion ?? "",
     codigo_barras: producto?.codigo_barras ?? "",
     categoria: producto ? String(producto.categoria) : "",
     costo: producto?.costo != null ? String(producto.costo) : "",
@@ -57,6 +58,18 @@ function FormularioProducto({ producto, categorias, alGuardar }: PropsFormulario
     <form onSubmit={guardar} noValidate>
       {general && <p className="alerta" role="alert">{general}</p>}
       <Campo etiqueta="Nombre y presentación" placeholder="Arroz extra 1 kg" value={datos.nombre} onChange={cambiar("nombre")} error={errores.nombre} required />
+      <div className="campo">
+        <label htmlFor="descripcion-producto">Descripción (opcional)</label>
+        <textarea
+          id="descripcion-producto"
+          rows={3}
+          placeholder="Lo que verá el cliente en la ficha del producto"
+          value={datos.descripcion}
+          onChange={cambiar("descripcion")}
+          aria-invalid={errores.descripcion ? true : undefined}
+        />
+        {errores.descripcion && <p className="error-campo">{errores.descripcion}</p>}
+      </div>
       <div className="rejilla-formulario">
         <Campo etiqueta="Marca" value={datos.marca} onChange={cambiar("marca")} error={errores.marca} required />
         <Seleccion etiqueta="Categoría" value={datos.categoria} onChange={cambiar("categoria")} error={errores.categoria} required>

@@ -12,9 +12,11 @@ interface DatosRegistro {
 interface Sesion {
   usuario: Usuario | null;
   cargando: boolean;
-  ingresar: (email: string, password: string) => Promise<Usuario>;
+  ingresar: (email: string, password: string, recordar?: boolean) => Promise<Usuario>;
   registrarse: (datos: DatosRegistro) => Promise<Usuario>;
   salir: () => Promise<void>;
+  /** Reemplaza los datos del usuario tras editarlos en "Mi cuenta". */
+  actualizar: (usuario: Usuario) => void;
 }
 
 const ContextoSesion = createContext<Sesion | null>(null);
@@ -22,11 +24,11 @@ const ContextoSesion = createContext<Sesion | null>(null);
 export const RUTA_INICIO: Record<Rol, string> = {
   admin: "/admin",
   vendedor: "/vendedor",
-  cliente: "/cliente",
+  cliente: "/catalogo",
 };
 
 // Páginas de la tienda online a las que un cliente vuelve tras ingresar (p. ej. desde el carrito).
-const RUTAS_TIENDA = ["/catalogo", "/carrito", "/confirmar", "/pedido/"];
+const RUTAS_TIENDA = ["/catalogo", "/producto/", "/carrito", "/confirmar", "/pedido/", "/tiendas", "/cliente"];
 
 /** A dónde ir después de ingresar o registrarse: a la página de origen si el rol puede verla. */
 export function destinoTrasIngresar(rol: Rol, desde?: string) {
@@ -49,9 +51,9 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
       .finally(() => setCargando(false));
   }, []);
 
-  const ingresar = useCallback(async (email: string, password: string) => {
+  const ingresar = useCallback(async (email: string, password: string, recordar = true) => {
     const r = await post<{ access: string; refresh: string; usuario: Usuario }>("/auth/login/", { email, password });
-    guardarTokens({ access: r.access, refresh: r.refresh });
+    guardarTokens({ access: r.access, refresh: r.refresh }, recordar);
     setUsuario(r.usuario);
     return r.usuario;
   }, []);
@@ -72,7 +74,7 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
   }, []);
 
   const valor = useMemo(
-    () => ({ usuario, cargando, ingresar, registrarse, salir }),
+    () => ({ usuario, cargando, ingresar, registrarse, salir, actualizar: setUsuario }),
     [usuario, cargando, ingresar, registrarse, salir],
   );
   return <ContextoSesion.Provider value={valor}>{children}</ContextoSesion.Provider>;

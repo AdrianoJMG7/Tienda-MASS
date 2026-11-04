@@ -1,9 +1,29 @@
+import { Link } from "react-router";
 import { useCarrito } from "../carrito";
-import { formatoFecha, soles } from "../formato";
+import { useFavoritos } from "../favoritos";
+import { descuento, soles } from "../formato";
 import type { Producto } from "../tipos";
 import Cantidad from "./Cantidad";
 import Disponibilidad from "./Disponibilidad";
 import FotoProducto from "./FotoProducto";
+import Icono from "./Icono";
+
+/** Corazón para guardar o quitar el producto de "Mis favoritos". */
+export function BotonFavorito({ producto }: { producto: Pick<Producto, "id" | "nombre"> }) {
+  const { esFavorito, alternar } = useFavoritos();
+  const guardado = esFavorito(producto.id);
+  return (
+    <button
+      type="button"
+      className={`boton-favorito${guardado ? " guardado" : ""}`}
+      aria-pressed={guardado}
+      aria-label={`${guardado ? "Quitar de" : "Guardar en"} favoritos: ${producto.nombre}`}
+      onClick={() => alternar(producto.id)}
+    >
+      <Icono nombre="corazon" relleno={guardado} />
+    </button>
+  );
+}
 
 interface Props {
   producto: Producto;
@@ -17,28 +37,27 @@ export default function TarjetaProducto({ producto: p, puedeComprar, hayTienda }
   const enCarrito = cantidadDe(p.id);
   const disponible = hayTienda ? (p.disponible ?? 0) : null;
   const agotado = disponible === 0;
-  const descuento = p.precio_oferta != null ? Math.round((1 - p.precio_oferta / p.precio) * 100) : 0;
+  const rebaja = descuento(p.precio, p.precio_oferta);
 
   return (
     <article className="tarjeta-producto">
-      <div className="tarjeta-producto-foto">
-        <FotoProducto producto={p} tamano={120} />
-        {descuento > 0 && <span className="sello-oferta">−{descuento} %</span>}
-      </div>
-      <h3>{p.nombre}</h3>
-      <p className="dato-secundario">
+      {rebaja > 0 && <span className="sello-descuento">−{rebaja}%</span>}
+      {puedeComprar && <BotonFavorito producto={p} />}
+      <Link to={`/producto/${p.id}`} className="tarjeta-producto-enlace">
+        <FotoProducto producto={p} tamano={112} />
+        <h3>{p.nombre}</h3>
+      </Link>
+      <p className="dato-secundario tarjeta-producto-marca">
         {p.marca}
-        {p.marca_propia && <span className="insignia propia">Marca propia</span>}
+        {p.marca_propia && <span className="insignia propia">Marca Mass</span>}
       </p>
       <p className="precio">
-        {p.precio_oferta != null ? (
-          <>
-            <strong className="precio-oferta">{soles(p.precio_oferta)}</strong>
-            <s className="dato-secundario">{soles(p.precio)}</s>
-            <small className="dato-secundario">Hasta el {formatoFecha(p.oferta_fin!)}</small>
-          </>
-        ) : (
-          <strong>{soles(p.precio)}</strong>
+        <strong className={p.precio_oferta != null ? "precio-oferta" : undefined}>{soles(p.precio_final)}</strong>
+        {p.precio_oferta != null && (
+          <s className="precio-antes">
+            <span className="solo-lector">Antes </span>
+            {soles(p.precio)}
+          </s>
         )}
       </p>
       <Disponibilidad unidades={disponible} />
@@ -52,7 +71,8 @@ export default function TarjetaProducto({ producto: p, puedeComprar, hayTienda }
               alCambiar={(c) => cambiarCantidad(p.id, c)}
             />
           ) : (
-            <button type="button" className="boton ancho" disabled={agotado} onClick={() => agregar(p)}>
+            <button type="button" className="boton-primario ancho" disabled={agotado} onClick={() => agregar(p)}>
+              <Icono nombre="carrito" />
               {agotado ? "Agotado" : "Agregar"}
               <span className="solo-lector"> {p.nombre}</span>
             </button>

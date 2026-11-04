@@ -13,6 +13,9 @@ export interface Usuario {
   rol: Rol;
   tienda: number | null;
   tienda_nombre: string | null;
+  foto: string | null;
+  medio_pago_preferido: "" | "efectivo" | "tarjeta" | "yape_plin";
+  tienda_preferida: number | null;
 }
 
 interface Tokens {
@@ -42,19 +45,31 @@ function aTexto(valor: unknown): string {
   return valor == null ? "" : String(valor);
 }
 
+// "Recordarme" guarda la sesión en localStorage; si no, en sessionStorage y se cierra con el navegador.
+function almacen(): Storage | null {
+  try {
+    return sessionStorage.getItem(CLAVE_TOKENS) ? sessionStorage : localStorage;
+  } catch {
+    return null;
+  }
+}
+
 export function leerTokens(): Tokens | null {
   try {
-    const texto = localStorage.getItem(CLAVE_TOKENS);
+    const texto = almacen()?.getItem(CLAVE_TOKENS);
     return texto ? (JSON.parse(texto) as Tokens) : null;
   } catch {
     return null;
   }
 }
 
-export function guardarTokens(tokens: Tokens | null) {
+export function guardarTokens(tokens: Tokens | null, recordar?: boolean) {
   try {
-    if (tokens) localStorage.setItem(CLAVE_TOKENS, JSON.stringify(tokens));
-    else localStorage.removeItem(CLAVE_TOKENS);
+    // Al renovar el token se mantiene donde ya estaba guardado.
+    const destino = recordar === undefined ? almacen() : recordar ? localStorage : sessionStorage;
+    localStorage.removeItem(CLAVE_TOKENS);
+    sessionStorage.removeItem(CLAVE_TOKENS);
+    if (tokens) destino?.setItem(CLAVE_TOKENS, JSON.stringify(tokens));
   } catch {
     // Sin almacenamiento disponible la sesión dura solo mientras la página esté abierta.
   }
@@ -148,11 +163,15 @@ export const post = <T>(ruta: string, datos: unknown) => api<T>(ruta, { method: 
 export const patch = <T>(ruta: string, datos: unknown) => api<T>(ruta, { method: "PATCH", body: cuerpo(datos) });
 export const eliminar = (ruta: string) => api<void>(ruta, { method: "DELETE" });
 
-/** Arma la ruta con sus filtros, omitiendo los vacíos. */
-export function conFiltros(ruta: string, filtros: Record<string, string | number | boolean | undefined>) {
+type ValorFiltro = string | number | boolean | undefined;
+
+/** Arma la ruta con sus filtros, omitiendo los vacíos; una lista repite el parámetro (?marca=a&marca=b). */
+export function conFiltros(ruta: string, filtros: Record<string, ValorFiltro | ValorFiltro[]>) {
   const params = new URLSearchParams();
-  for (const [clave, valor] of Object.entries(filtros)) {
-    if (valor !== undefined && valor !== "" && valor !== false) params.set(clave, String(valor));
+  for (const [clave, valores] of Object.entries(filtros)) {
+    for (const valor of Array.isArray(valores) ? valores : [valores]) {
+      if (valor !== undefined && valor !== "" && valor !== false) params.append(clave, String(valor));
+    }
   }
   const texto = params.toString();
   return texto ? `${ruta}?${texto}` : ruta;

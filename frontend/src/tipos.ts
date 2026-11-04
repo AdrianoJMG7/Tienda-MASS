@@ -37,6 +37,7 @@ export interface Producto {
   id: number;
   nombre: string;
   marca: string;
+  descripcion: string;
   codigo_barras: string;
   foto: string | null;
   categoria: number;
