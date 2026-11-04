@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
 
     services:
       postgres:
@@ -34,7 +37,7 @@ jobs:
       DB_PORT: "5432"
       DB_SCHEMA: public
       DB_SSLMODE: disable
-      
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
