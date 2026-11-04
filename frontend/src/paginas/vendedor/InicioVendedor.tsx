@@ -35,7 +35,7 @@ export default function InicioVendedor() {
             <p className="pastilla-tienda">
               <Icono nombre="ubicacion" tamano={22} />
               <strong>
-                Tienda: {tienda.codigo} · {tienda.nombre}
+                Tienda: {tienda.nombre}
               </strong>
               <span className="pastilla-direccion">
                 {tienda.direccion}, {tienda.distrito}
