@@ -36,7 +36,7 @@ def crear_venta(vendedor, tienda, items, medio_pago, monto_recibido=None):
         total=0,
         medio_pago=medio_pago,
         canal=CanalVenta.CAJA,
-        numero_ticket=f"CAJA-{timezone.now().strftime('%Y%m%d%H%M%S')}",
+        numero_ticket=f"CAJA-{timezone.localtime().strftime('%Y%m%d%H%M%S')}",
     )
 
     detalles = DetalleVenta.objects.bulk_create(
@@ -46,18 +46,16 @@ def crear_venta(vendedor, tienda, items, medio_pago, monto_recibido=None):
         for pid, cantidad in cantidades.items()
     )
     venta.total = sum(d.subtotal for d in detalles)
-    venta.save(update_fields=["total"])
+    if medio_pago == MedioPago.EFECTIVO:
+        if monto_recibido is not None and monto_recibido < venta.total:
+            raise ValidationError({"monto_recibido": "El monto recibido no cubre el total de la venta."})
+        venta.monto_recibido = monto_recibido
+    venta.save(update_fields=["total", "monto_recibido"])
 
     # Descontar stock
     inventario.descontar(
         tienda, [(productos[pid], cantidad) for pid, cantidad in cantidades.items()],
         usuario=vendedor, referencia=f"Venta {venta.numero_ticket}",
     )
-
-    # Calcular vuelto para pagos en efectivo
-    if medio_pago == MedioPago.EFECTIVO and monto_recibido:
-        venta._vuelto = max(0, float(monto_recibido) - float(venta.total))
-    else:
-        venta._vuelto = None
 
     return venta

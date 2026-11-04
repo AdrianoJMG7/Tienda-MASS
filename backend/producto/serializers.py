@@ -21,6 +21,7 @@ class ProductoSerializer(serializers.ModelSerializer):
     precio_final = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     quitar_foto = serializers.BooleanField(write_only=True, required=False)
     disponible = serializers.IntegerField(read_only=True, allow_null=True, help_text="Solo con ?tienda=")
+    stock_total = serializers.IntegerField(read_only=True, help_text="Solo administrador: suma de todas las tiendas")
 
     class Meta:
         model = Producto
@@ -42,6 +43,7 @@ class ProductoSerializer(serializers.ModelSerializer):
             "marca_propia",
             "activo",
             "disponible",
+            "stock_total",
         ]
         extra_kwargs = {
             "costo": {"required": True, "min_value": Decimal("0")},
@@ -89,12 +91,15 @@ class ProductoSerializer(serializers.ModelSerializer):
             datos["precio_final"] = instancia.precio_vigente()
         if not hasattr(instancia, "disponible"):
             datos.pop("disponible", None)
+        if not hasattr(instancia, "stock_total"):
+            datos.pop("stock_total", None)
         return datos
 
 
 class OfertaSerializer(serializers.ModelSerializer):
     producto_nombre = serializers.CharField(source="producto.nombre", read_only=True)
     producto_marca = serializers.CharField(source="producto.marca", read_only=True)
+    producto_foto = serializers.ImageField(source="producto.foto", read_only=True)
     precio_normal = serializers.DecimalField(
         source="producto.precio", max_digits=10, decimal_places=2, read_only=True
     )
@@ -103,6 +108,7 @@ class OfertaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Oferta
         fields = [
+            "producto_foto",
             "id",
             "producto",
             "producto_nombre",

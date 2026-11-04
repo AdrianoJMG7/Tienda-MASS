@@ -9,6 +9,7 @@ from django.db.models.functions import TruncDate
 
 from choices import CanalVenta, EstadoPedido
 from pedido.models import Pedido
+from producto.models import Oferta
 from tienda.models import Tienda
 from venta.models import DetalleVenta, Venta
 
@@ -30,6 +31,11 @@ class Filtros:
 def _soles(valor):
     """Redondea a céntimos (las sumas de SQLite traen decimales de sobra)."""
     return Decimal(valor or 0).quantize(CENTIMO)
+
+
+def _variacion(actual, anterior):
+    """Variación porcentual con un decimal; None si no hay con qué comparar."""
+    return round((float(actual) - float(anterior)) / float(anterior) * 100, 1) if anterior else None
 
 
 def _ticket(total, ventas):
@@ -132,6 +138,69 @@ def panel(filtros: Filtros):
         producto["total"] = _soles(producto["total"])
 
     total_pedidos = sum(estados_db.values())
+
+    # Periodo anterior de la misma duración, para comparar.
+    dias = (filtros.hasta - filtros.desde).days + 1
+    previo = (filtros.desde - timedelta(days=dias), filtros.desde - timedelta(days=1))
+    ventas_previas = Venta.objects.filter(fecha__date__range=previo)
+    pedidos_previos = Pedido.objects.filter(creado__date__range=previo)
+    if filtros.tienda:
+        ventas_previas = ventas_previas.filter(tienda=filtros.tienda)
+        pedidos_previos = pedidos_previos.filter(tienda=filtros.tienda)
+    previas = ventas_previas.aggregate(ventas=Count("id"), total=Sum("total"))
+    total_previo = _soles(previas["total"])
+    clientes = pedidos.values("cliente").distinct().count()
+    tienda_previa = dict(ventas_previas.values("tienda_id").annotate(s=Sum("total")).values_list("tienda_id", "s"))
+    for fila in por_tienda:
+        fila["variacion"] = _variacion(fila["total"], tienda_previa.get(fila["tienda"]))
+
+    # Ventas por categoría: las tres mayores y el resto junto en "Otros".
+    categorias = list(
+        DetalleVenta.objects.filter(venta__in=ventas)
+        .values(categoria=F("producto__categoria__nombre"))
+        .annotate(total=Sum(F("cantidad") * F("precio_unitario"), output_field=DecimalField(max_digits=12, decimal_places=2)))
+        .order_by("-total")
+    )
+    suma_categorias = sum(c["total"] for c in categorias) or Decimal("1")
+    por_categoria = [
+        {"categoria": c["categoria"], "total": _soles(c["total"]), "porcentaje": round(float(c["total"] / suma_categorias) * 100)}
+        for c in categorias
+    ]
+
+    por_vendedor = [
+        {
+            "vendedor": f["vendedor__nombre"],
+            "tienda": f["tienda__codigo"],
+            "ventas": f["n"],
+            "total": _soles(f["suma"]),
+            "ticket_promedio": _ticket(f["suma"], f["n"]),
+        }
+        for f in ventas.values("vendedor__nombre", "tienda__codigo").annotate(n=Count("id"), suma=Sum("total")).order_by("-suma")
+    ]
+
+    # Ofertas activas en algún momento del periodo y lo que se vendió de cada producto mientras duraron.
+    ofertas = []
+    for oferta in Oferta.objects.filter(inicio__lte=filtros.hasta, fin__gte=filtros.desde).select_related("producto"):
+        vendido = DetalleVenta.objects.filter(
+            venta__in=ventas, producto=oferta.producto,
+            venta__fecha__date__range=(max(oferta.inicio, filtros.desde), min(oferta.fin, filtros.hasta)),
+        ).aggregate(
+            unidades=Sum("cantidad"),
+            total=Sum(F("cantidad") * F("precio_unitario"), output_field=DecimalField(max_digits=12, decimal_places=2)),
+        )
+        ofertas.append({
+            "oferta": oferta.id,
+            "producto": oferta.producto.nombre,
+            "marca": oferta.producto.marca,
+            "precio_normal": oferta.producto.precio,
+            "precio_especial": oferta.precio_especial,
+            "inicio": oferta.inicio,
+            "fin": oferta.fin,
+            "estado": oferta.estado,
+            "unidades": vendido["unidades"] or 0,
+            "total": _soles(vendido["total"]),
+        })
+    ofertas.sort(key=lambda o: o["unidades"], reverse=True)
     return {
         "filtros": {
             "desde": filtros.desde,
@@ -148,6 +217,17 @@ def panel(filtros: Filtros):
             "pedidos_cancelados": estados_db.get(EstadoPedido.CANCELADO, 0),
             "minutos_preparacion": _minutos_promedio([l - c for _, c, l in preparados]),
         },
+        "variacion": {
+            "total": _variacion(total, total_previo),
+            "ventas": _variacion(totales["ventas"], previas["ventas"]),
+            "pedidos": _variacion(total_pedidos, pedidos_previos.count()),
+            "clientes": _variacion(clientes, pedidos_previos.values("cliente").distinct().count()),
+            "ticket_promedio": _variacion(_ticket(total, totales["ventas"]), _ticket(total_previo, previas["ventas"])),
+        },
+        "clientes_unicos": clientes,
+        "por_categoria": por_categoria,
+        "por_vendedor": por_vendedor,
+        "ofertas": ofertas[:20],
         "por_canal": por_canal,
         "por_tienda": por_tienda,
         "por_dia": por_dia,

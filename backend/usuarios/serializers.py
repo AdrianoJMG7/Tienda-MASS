@@ -1,4 +1,5 @@
 import re
+import secrets
 from datetime import date
 
 from django.contrib.auth import password_validation
@@ -7,7 +8,10 @@ from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import Usuario
+from tienda.models import Tienda
+from tienda.serializers import TiendaSerializer
+
+from .models import Rol, SesionUsuario, Usuario
 
 CELULAR_RE = re.compile(r"^9\d{8}$")
 
@@ -34,16 +38,91 @@ class UsuarioSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class VendedorSerializer(serializers.ModelSerializer):
+    """Lo que el administrador gestiona de un vendedor. La contraseña es opcional: si falta, se genera una."""
+
+    email = serializers.EmailField()
+    celular = serializers.CharField(max_length=15)
+    tienda = serializers.PrimaryKeyRelatedField(
+        queryset=Tienda.objects.all(), error_messages={"null": "Elige una tienda.", "required": "Elige una tienda."}
+    )
+    tienda_codigo = serializers.CharField(source="tienda.codigo", read_only=True)
+    tienda_nombre = serializers.CharField(source="tienda.nombre", read_only=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True, style={"input_type": "password"})
+
+    class Meta:
+        model = Usuario
+        fields = ["id", "email", "nombre", "celular", "tienda", "tienda_codigo", "tienda_nombre", "is_active", "password"]
+
+    def validate_email(self, valor):
+        valor = valor.strip().lower()
+        repetidos = Usuario.objects.filter(email__iexact=valor)
+        if self.instance:
+            repetidos = repetidos.exclude(pk=self.instance.pk)
+        if repetidos.exists():
+            raise serializers.ValidationError("Ya existe una cuenta con este email.")
+        return valor
+
+    def validate_nombre(self, valor):
+        valor = valor.strip()
+        if len(valor) < 3:
+            raise serializers.ValidationError("Escribe el nombre completo.")
+        return valor
+
+    def validate_celular(self, valor):
+        valor = validar_celular(valor)
+        if not valor:
+            raise serializers.ValidationError("El celular es obligatorio.")
+        return valor
+
+    def validate_tienda(self, tienda):
+        actual = self.instance.tienda_id if self.instance else None
+        if not tienda.activa and tienda.pk != actual:
+            raise serializers.ValidationError("Esa tienda está desactivada.")
+        return tienda
+
+    def validate_password(self, valor):
+        if not valor:
+            return valor
+        try:
+            password_validation.validate_password(valor)
+        except Exception as error:
+            raise serializers.ValidationError(list(error.messages))
+        return valor
+
+    def create(self, datos):
+        password = datos.pop("password", "")
+        temporal = "" if password else secrets.token_urlsafe(9)
+        vendedor = Usuario.objects.create_user(rol=Rol.VENDEDOR, password=password or temporal, **datos)
+        # Se muestra una sola vez al administrador para que se la entregue al vendedor.
+        vendedor.password_temporal = temporal
+        return vendedor
+
+    def update(self, vendedor, datos):
+        password = datos.pop("password", "")
+        if password:
+            vendedor.set_password(password)
+        return super().update(vendedor, datos)
+
+    def to_representation(self, vendedor):
+        datos = super().to_representation(vendedor)
+        if temporal := getattr(vendedor, "password_temporal", ""):
+            datos["password_temporal"] = temporal
+        return datos
+
+
 class PerfilSerializer(serializers.ModelSerializer):
     """Mi cuenta: el usuario consulta y actualiza sus datos y preferencias. El email no cambia."""
 
     tienda_nombre = serializers.CharField(source="tienda.nombre", read_only=True, default=None)
+    tienda_info = TiendaSerializer(source="tienda", read_only=True)
+    rol_display = serializers.CharField(source="get_rol_display", read_only=True)
     quitar_foto = serializers.BooleanField(write_only=True, required=False)
 
     class Meta:
         model = Usuario
         fields = [
-            "id", "email", "nombre", "celular", "rol", "tienda", "tienda_nombre", "is_active",
+            "id", "email", "nombre", "celular", "rol", "rol_display", "tienda", "tienda_nombre", "tienda_info", "is_active",
             "dni", "fecha_nacimiento", "foto", "quitar_foto", "medio_pago_preferido", "tienda_preferida",
         ]
         read_only_fields = ["id", "email", "rol", "tienda", "tienda_nombre", "is_active"]
@@ -160,6 +239,29 @@ class LoginSerializer(TokenObtainPairSerializer):
             raise AuthenticationFailed("Email o contraseña incorrectos.", "credenciales_invalidas")
         datos["usuario"] = UsuarioSerializer(self.user).data
         return datos
+
+
+class CambiarPasswordSerializer(serializers.Serializer):
+    actual = serializers.CharField(style={"input_type": "password"})
+    nueva = serializers.CharField(style={"input_type": "password"})
+
+    def validate_actual(self, valor):
+        if not self.context["request"].user.check_password(valor):
+            raise serializers.ValidationError("La contraseña actual no es correcta.")
+        return valor
+
+    def validate_nueva(self, valor):
+        try:
+            password_validation.validate_password(valor, self.context["request"].user)
+        except Exception as error:
+            raise serializers.ValidationError(list(error.messages))
+        return valor
+
+
+class SesionUsuarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SesionUsuario
+        fields = ["id", "dispositivo", "fecha"]
 
 
 class LogoutSerializer(serializers.Serializer):

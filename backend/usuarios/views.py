@@ -5,17 +5,31 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from .models import Usuario
+from .models import Rol, SesionUsuario, Usuario
+from .permisos import EsAdmin
 from .serializers import (
+    CambiarPasswordSerializer,
+    SesionUsuarioSerializer,
     LoginSerializer,
     LogoutSerializer,
     PerfilSerializer,
     RegistroSerializer,
     UsuarioSerializer,
+    VendedorSerializer,
 )
+
+
+def describir_dispositivo(agente):
+    """Resume el navegador y el sistema, p. ej. "Chrome en Windows"; no se guarda nada más del equipo."""
+    navegadores = (("Edg/", "Edge"), ("OPR/", "Opera"), ("Chrome/", "Chrome"), ("Firefox/", "Firefox"), ("Safari/", "Safari"))
+    sistemas = (("Android", "Android"), ("iPhone", "iOS"), ("iPad", "iOS"), ("Windows", "Windows"), ("Mac OS", "macOS"), ("Linux", "Linux"))
+    navegador = next((nombre for clave, nombre in navegadores if clave in agente), "Navegador")
+    sistema = next((nombre for clave, nombre in sistemas if clave in agente), "dispositivo desconocido")
+    return f"{navegador} en {sistema}"
 
 
 class RegistroView(generics.CreateAPIView):
@@ -30,6 +44,15 @@ class LoginView(TokenObtainPairView):
     """HU03: inicio de sesión; devuelve tokens JWT y los datos del usuario (rol incluido)."""
 
     serializer_class = LoginSerializer
+
+    def post(self, request, *args, **kwargs):
+        respuesta = super().post(request, *args, **kwargs)
+        if respuesta.status_code == status.HTTP_200_OK:
+            SesionUsuario.objects.create(
+                usuario_id=respuesta.data["usuario"]["id"],
+                dispositivo=describir_dispositivo(request.headers.get("User-Agent", "")),
+            )
+        return respuesta
 
 
 class RefreshView(TokenRefreshView):
@@ -59,6 +82,31 @@ class YoView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class CambiarPasswordView(APIView):
+    """Cambia la contraseña y cierra las demás sesiones; devuelve tokens nuevos para esta."""
+
+    @extend_schema(request=CambiarPasswordSerializer, responses={200: LoginSerializer})
+    def post(self, request):
+        entrada = CambiarPasswordSerializer(data=request.data, context={"request": request})
+        entrada.is_valid(raise_exception=True)
+        request.user.set_password(entrada.validated_data["nueva"])
+        request.user.save(update_fields=["password"])
+        for token in OutstandingToken.objects.filter(user=request.user):
+            BlacklistedToken.objects.get_or_create(token=token)
+        refresh = RefreshToken.for_user(request.user)
+        return Response({"access": str(refresh.access_token), "refresh": str(refresh)})
+
+
+class SesionesView(generics.ListAPIView):
+    """Últimos inicios de sesión del usuario."""
+
+    serializer_class = SesionUsuarioSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return self.request.user.sesiones.all()[:5]
 
 
 class InicioView(APIView):
@@ -105,15 +153,30 @@ class InicioView(APIView):
         })
 
 
-@extend_schema(parameters=[OpenApiParameter("q", str)])
+@extend_schema(
+    parameters=[
+        OpenApiParameter("q", str, description="Nombre o email"),
+        OpenApiParameter("tienda", int),
+        OpenApiParameter("estado", str, enum=["activos", "inactivos"]),
+    ]
+)
 class UsuarioViewSet(viewsets.ModelViewSet):
-    """El administrador gestiona usuarios."""
+    """HU04: el administrador gestiona a los vendedores. Un vendedor no se borra: se desactiva, porque tiene ventas."""
 
-    serializer_class = UsuarioSerializer
-    permission_classes = [permissions.IsAdminUser]
+    serializer_class = VendedorSerializer
+    permission_classes = [EsAdmin]
 
     def get_queryset(self):
-        consulta = Usuario.objects.all()
-        if q := self.request.query_params.get("q", "").strip():
+        p = self.request.query_params
+        consulta = Usuario.objects.filter(rol=Rol.VENDEDOR).select_related("tienda")
+        if q := p.get("q", "").strip():
             consulta = consulta.filter(Q(nombre__icontains=q) | Q(email__icontains=q))
+        if (tienda := p.get("tienda", "")).isdigit():
+            consulta = consulta.filter(tienda_id=tienda)
+        if p.get("estado") in ("activos", "inactivos"):
+            consulta = consulta.filter(is_active=p["estado"] == "activos")
         return consulta.order_by("nombre")
+
+    def perform_destroy(self, vendedor):
+        vendedor.is_active = False
+        vendedor.save(update_fields=["is_active"])

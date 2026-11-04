@@ -4,9 +4,10 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from usuarios.permisos import EsAdmin
+from usuarios.permisos import EsAdmin, EsVendedor
 
 from . import exportar, servicios
+from .tienda import panel_tienda
 from .serializers import ExportarSerializer, FiltrosReporteSerializer, PruebaUsabilidadSerializer
 
 PARAMETROS = [
@@ -63,11 +64,11 @@ class UsabilidadView(APIView):
     permission_classes = [EsAdmin]
 
     @extend_schema(
-        request=PruebaUsabilidadSerializer,
+        request=PruebaUsabilidadSerializer(many=True),
         responses={(200, "application/pdf"): OpenApiTypes.BINARY},
     )
     def post(self, request):
-        entrada = PruebaUsabilidadSerializer(data=request.data)
+        entrada = PruebaUsabilidadSerializer(data=request.data, many=True)
         entrada.is_valid(raise_exception=True)
         datos = entrada.validated_data
         contenido = exportar.pdf_usabilidad(datos)
@@ -75,3 +76,15 @@ class UsabilidadView(APIView):
         respuesta = HttpResponse(contenido, content_type="application/pdf")
         respuesta["Content-Disposition"] = 'attachment; filename="reporte-usabilidad-mass.pdf"'
         return respuesta
+
+
+class PanelTiendaView(APIView):
+    """Reportes y rendimiento de la tienda del vendedor."""
+
+    permission_classes = [EsVendedor]
+
+    @extend_schema(parameters=[OpenApiParameter("dias", int, enum=[7, 30, 90])], responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        dias = request.query_params.get("dias", "7")
+        dias = int(dias) if dias in ("7", "30", "90") else 7
+        return Response(panel_tienda(request.user.tienda, dias))

@@ -15,6 +15,9 @@ from tienda.models import Tienda
 from ...models import Stock
 
 
+STOCK_MINIMO = 10
+
+
 def cantidad_simulada(azar):
     """La mayoría con buen stock, algunos con pocas unidades y unos pocos agotados."""
     sorteo = azar.random()
@@ -38,6 +41,8 @@ class Command(BaseCommand):
             for producto_id in productos:
                 cantidad = cantidad_simulada(azar)  # se sortea siempre para que sea determinista
                 if (tienda.id, producto_id) not in existentes:
-                    nuevos.append(Stock(tienda=tienda, producto_id=producto_id, cantidad=cantidad))
+                    nuevos.append(Stock(tienda=tienda, producto_id=producto_id, cantidad=cantidad, stock_minimo=STOCK_MINIMO))
         Stock.objects.bulk_create(nuevos, batch_size=1000)
+        # Los registros de cargas anteriores no tenían mínimo y nunca avisaban de stock bajo.
+        Stock.objects.filter(stock_minimo=0).update(stock_minimo=STOCK_MINIMO)
         self.stdout.write(self.style.SUCCESS(f"Stock listo: {len(nuevos)} registros nuevos."))

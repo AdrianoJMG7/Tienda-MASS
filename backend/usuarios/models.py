@@ -1,6 +1,8 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.conf import settings
+from django.utils import timezone
 
 from choices import MedioPago
 
@@ -82,3 +84,14 @@ class Usuario(AbstractUser):
 
     def __str__(self):
         return f"{self.nombre} <{self.email}>"
+
+
+class SesionUsuario(models.Model):
+    """Registro de cada inicio de sesión, para que el usuario revise los accesos a su cuenta."""
+
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sesiones")
+    dispositivo = models.CharField(max_length=80)
+    fecha = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-fecha", "-id"]

@@ -62,6 +62,18 @@ def _secciones(datos):
             {3, 4, 5, 6},
         ),
         (
+            "Ventas por categoría",
+            ["Categoría", "Total", "Porcentaje"],
+            [[c["categoria"], c["total"], f'{c["porcentaje"]} %'] for c in datos["por_categoria"]],
+            {1},
+        ),
+        (
+            "Ventas por vendedor",
+            ["Vendedor", "Tienda", "Ventas", "Total", "Ticket promedio"],
+            [[v["vendedor"], v["tienda"], v["ventas"], v["total"], v["ticket_promedio"]] for v in datos["por_vendedor"]],
+            {3, 4},
+        ),
+        (
             "Pedidos online por estado",
             ["Estado", "Pedidos"],
             [[e["estado_display"], e["pedidos"]] for e in datos["por_estado"]],
@@ -198,7 +210,7 @@ def pdf_usabilidad(datos_pruebas):
     filas_rol = [["Rol", "Tiempo promedio (s)"]]
     colores_rol = {"admin": azul, "vendedor": verde, "cliente": amarillo}
     for rol in ["admin", "vendedor", "cliente"]:
-        filas_rol.append([rol.capitalize(), f"{promedio_por_rol[rol]:.1f}"])
+        filas_rol.append([rol.capitalize(), f"{promedio_por_rol[rol]:.1f}" if rol in promedio_por_rol else "—"])
     tabla_rol = Table(filas_rol, repeatRows=1, colWidths=[5 * cm, 5 * cm])
     tabla_rol.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), azul),

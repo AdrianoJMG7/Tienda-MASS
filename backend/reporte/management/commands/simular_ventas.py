@@ -22,6 +22,7 @@ from usuarios.models import Rol
 from venta.models import DetalleVenta, Venta
 
 EMAIL_CLIENTE = "simulado@mass.test"
+CLIENTES_SIMULADOS = 40
 MEDIOS = [MedioPago.EFECTIVO, MedioPago.TARJETA, MedioPago.YAPE_PLIN]
 MOTIVOS = ["No se recogió a tiempo", "El cliente ya no lo necesita", "Producto dañado en tienda"]
 
@@ -43,13 +44,17 @@ class Command(BaseCommand):
         if not productos or not tiendas or not respaldo:
             raise CommandError("Faltan productos, tiendas o el administrador: corre antes cargar_demo.")
 
-        cliente, creado = Usuario.objects.get_or_create(
-            email=EMAIL_CLIENTE, defaults={"nombre": "Cliente simulado", "rol": Rol.CLIENTE, "is_active": False}
-        )
-        if creado:
-            cliente.set_unusable_password()  # cuenta solo para agrupar los pedidos simulados; no puede ingresar
-            cliente.save(update_fields=["password"])
-        borrados = self._borrar_simulacion(cliente)
+        clientes = []
+        for numero in range(CLIENTES_SIMULADOS):
+            email = EMAIL_CLIENTE if numero == 0 else f"simulado{numero + 1}@mass.test"
+            cliente, creado = Usuario.objects.get_or_create(
+                email=email, defaults={"nombre": f"Cliente simulado {numero + 1}", "rol": Rol.CLIENTE, "is_active": False}
+            )
+            if creado:
+                cliente.set_unusable_password()  # cuentas solo para agrupar los pedidos simulados; no pueden ingresar
+                cliente.save(update_fields=["password"])
+            clientes.append(cliente)
+        borrados = self._borrar_simulacion(clientes)
 
         azar = random.Random(16)
         # Pocos productos venden mucho y muchos venden poco, como en una bodega real.
@@ -87,7 +92,7 @@ class Command(BaseCommand):
                     items = self._items(azar, productos, pesos)
                     codigo = self._codigo(azar, codigos)
                     pedido = Pedido(
-                        cliente=cliente, tienda=tienda, codigo_recojo=codigo, medio_pago=azar.choice(MEDIOS),
+                        cliente=azar.choice(clientes), tienda=tienda, codigo_recojo=codigo, medio_pago=azar.choice(MEDIOS),
                         total=sum(p.precio * c for p, c in items), creado=creado, vence_en=creado + timedelta(hours=48),
                         preparado_en=creado + timedelta(minutes=azar.uniform(2, 15)),
                     )
@@ -159,11 +164,11 @@ class Command(BaseCommand):
         ))
 
     @staticmethod
-    def _borrar_simulacion(cliente):
-        simuladas = Venta.objects.filter(numero_ticket__startswith="SIM-") | Venta.objects.filter(pedido__cliente=cliente)
+    def _borrar_simulacion(clientes):
+        simuladas = Venta.objects.filter(numero_ticket__startswith="SIM-") | Venta.objects.filter(pedido__cliente__in=clientes)
         n = simuladas.count()
         simuladas.delete()  # sus detalles se borran en cascada
-        Pedido.objects.filter(cliente=cliente).delete()
+        Pedido.objects.filter(cliente__in=clientes).delete()
         return n
 
     @staticmethod

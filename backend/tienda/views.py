@@ -1,3 +1,4 @@
+from django.db.models import Count, Q
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
@@ -26,5 +27,7 @@ class TiendaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         usuario = self.request.user
         if usuario.is_authenticated and usuario.rol == Rol.ADMIN:
-            return Tienda.objects.all()
+            return Tienda.objects.annotate(
+                vendedores_activos=Count("vendedores", filter=Q(vendedores__is_active=True))
+            )
         return Tienda.objects.filter(activa=True)
