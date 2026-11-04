@@ -12,5 +12,4 @@ psycopg-binary==3.3.6
 psycopg==3.3.6
 reportlab==5.1.0
 whitenoise==6.12.0
-python-dotenv
-gunicorn==23.0.0
+python-dotenv==1.2.4

@@ -35,7 +35,7 @@ Equipo: Oder, Adriano y Daniel. Ingeniería de Sistemas, Lima 2026.
 
 - **Backend:** Python 3.13, Django 6.1, Django REST Framework, SimpleJWT, bcrypt, drf-spectacular (OpenAPI)
 - **Frontend:** React 19, Vite, TypeScript, React Router; CSS mobile first (360, 768 y 1280 px)
-- **Base de datos:** SQLite en desarrollo, PostgreSQL en producción (`DATABASE_URL`)
+- **Base de datos:** SQLite en desarrollo, PostgreSQL en producción (variables `DB_*`, ver `backend/.env.example`)
 - **Calidad:** pruebas de Django, oxlint, GitHub Actions
 
 ```
