@@ -502,8 +502,9 @@ a {
 }
 
 .foto-producto.vacia {
-  display: inline-grid;
-  place-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   background: var(--azul-claro);
   color: var(--azul);
   font-weight: 800;
