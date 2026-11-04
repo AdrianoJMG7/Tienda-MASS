@@ -7,7 +7,8 @@ from pathlib import Path
 import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+from dotenv import load_dotenv
+load_dotenv(BASE_DIR / ".env")
 
 def env_list(nombre, por_defecto=""):
     return [v.strip() for v in os.environ.get(nombre, por_defecto).split(",") if v.strip()]
@@ -71,12 +72,19 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # SQLite en desarrollo; en producción se define DATABASE_URL (PostgreSQL en Neon).
 DATABASES = {
-    "default": dj_database_url.config(
-        default="sqlite:///" + str(BASE_DIR / "db.sqlite3"),
-        conn_max_age=600,
-    )
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ["DB_NAME"],
+        "USER": os.environ["DB_USER"],
+        "PASSWORD": os.environ["DB_PASSWORD"],
+        "HOST": os.environ["DB_HOST"],
+        "PORT": os.environ.get("DB_PORT", "5432"),
+        "OPTIONS": {
+            "sslmode": "require",
+            "options": f"-c search_path={os.environ.get('DB_SCHEMA', 'public')},public",
+        },
+    }
 }
-
 AUTH_USER_MODEL = "usuarios.Usuario"
 
 PASSWORD_HASHERS = [
