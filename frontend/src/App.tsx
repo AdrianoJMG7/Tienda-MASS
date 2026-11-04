@@ -5,6 +5,7 @@ import { RUTA_INICIO, useSesion } from "./auth";
 import { useCarrito } from "./carrito";
 import Icono from "./componentes/Icono";
 import LogoMass from "./componentes/LogoMass";
+import MiniCarrito from "./componentes/MiniCarrito";
 import Carrito from "./paginas/tienda/Carrito";
 import Catalogo from "./paginas/tienda/Catalogo";
 import Confirmar from "./paginas/tienda/Confirmar";
@@ -53,6 +54,9 @@ const SECCIONES_VENDEDOR = [
   { ruta: "/vendedor/reportes", texto: "Reportes" },
   { ruta: "/vendedor/perfil", texto: "Mi perfil" },
 ];
+
+// En estas páginas ya se ven los productos elegidos: el panel del carrito estorbaría.
+const RUTAS_SIN_PANEL = ["/carrito", "/confirmar"];
 
 const NOMBRE_ROL: Record<Rol, string> = { admin: "Administrador", vendedor: "Vendedor", cliente: "Cliente" };
 
@@ -261,7 +265,8 @@ function CabeceraPersonal() {
 
 function Cabecera() {
   const { usuario } = useSesion();
-  const { unidades, tienda } = useCarrito();
+  const { unidades, tienda, panelAbierto, alternarPanel } = useCarrito();
+  const { pathname } = useLocation();
   const compra = !usuario || usuario.rol === "cliente";
   const { datos: tiendas } = useCarga<Tienda[]>(compra ? "/tiendas/tiendas/" : null);
   const tiendaElegida = tiendas?.find((t) => t.id === tienda);
@@ -285,14 +290,29 @@ function Cabecera() {
             </Link>
           )}
           <MenuCuenta />
-          {compra && (
-            <Link to="/carrito" className="cabecera-carrito" aria-label={`Carrito, ${unidades} productos`}>
-              <Icono nombre="carrito" tamano={26} />
-              <span className="contador" aria-hidden="true">
-                {unidades}
-              </span>
-            </Link>
-          )}
+          {compra &&
+            (RUTAS_SIN_PANEL.includes(pathname) ? (
+              <Link to="/carrito" className="cabecera-carrito" aria-label={`Carrito, ${unidades} productos`}>
+                <Icono nombre="carrito" tamano={26} />
+                <span className="contador" aria-hidden="true">
+                  {unidades}
+                </span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className="cabecera-carrito"
+                aria-label={`Carrito, ${unidades} productos`}
+                aria-expanded={panelAbierto}
+                aria-controls="mini-carrito"
+                onClick={alternarPanel}
+              >
+                <Icono nombre="carrito" tamano={26} />
+                <span className="contador" aria-hidden="true">
+                  {unidades}
+                </span>
+              </button>
+            ))}
         </div>
       </div>
       {compra && (
@@ -322,6 +342,8 @@ function TiendaPreferida() {
 
 export default function App() {
   const { usuario } = useSesion();
+  const { panelAbierto } = useCarrito();
+  const { pathname } = useLocation();
   const esPersonal = usuario !== null && usuario.rol !== "cliente";
   const pie = usuario?.rol === "admin" ? "Tiendas Mass · Sistema de administración" : usuario?.rol === "vendedor" ? "Tiendas Mass · Sistema para vendedores" : "Tienda Online Mass · Prototipo académico";
   return (
@@ -331,6 +353,7 @@ export default function App() {
       </a>
       <TiendaPreferida />
       {esPersonal ? <CabeceraPersonal /> : <Cabecera />}
+      {!esPersonal && panelAbierto && !RUTAS_SIN_PANEL.includes(pathname) && <MiniCarrito />}
       <main id="contenido">
         <Routes>
           <Route path="/" element={<Inicio />} />

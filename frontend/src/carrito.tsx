@@ -31,6 +31,12 @@ interface Carrito extends Guardado {
   quitar: (producto: number) => void;
   vaciar: () => void;
   elegirTienda: (tienda: number) => void;
+  /** Panel con los productos elegidos: se abre al agregar uno o al pulsar el carrito. */
+  panelAbierto: boolean;
+  /** true si lo abrió el botón del carrito, no un producto recién agregado. */
+  panelPorClic: boolean;
+  alternarPanel: () => void;
+  cerrarPanel: () => void;
 }
 
 function leer(): Guardado {
@@ -47,6 +53,7 @@ const ContextoCarrito = createContext<Carrito | null>(null);
 
 export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<Guardado>(leer);
+  const [panel, setPanel] = useState({ abierto: false, porClic: false });
 
   useEffect(() => {
     try {
@@ -76,7 +83,11 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
           ];
       return { ...e, items };
     });
+    setPanel((actual) => (actual.abierto ? actual : { abierto: true, porClic: false }));
   }, []);
+
+  const alternarPanel = useCallback(() => setPanel((actual) => ({ abierto: !actual.abierto, porClic: !actual.abierto })), []);
+  const cerrarPanel = useCallback(() => setPanel({ abierto: false, porClic: false }), []);
 
   const cambiarCantidad = useCallback((producto: number, cantidad: number) => {
     setEstado((e) => ({
@@ -102,8 +113,12 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       quitar,
       vaciar,
       elegirTienda,
+      panelAbierto: panel.abierto,
+      panelPorClic: panel.porClic,
+      alternarPanel,
+      cerrarPanel,
     }),
-    [estado, agregar, cambiarCantidad, quitar, vaciar, elegirTienda],
+    [estado, panel, agregar, cambiarCantidad, quitar, vaciar, elegirTienda, alternarPanel, cerrarPanel],
   );
   return <ContextoCarrito.Provider value={valor}>{children}</ContextoCarrito.Provider>;
 }

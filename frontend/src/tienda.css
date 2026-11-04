@@ -2216,3 +2216,174 @@ main:has(.catalogo, .detalle-producto, .pagina-carrito, .pagina-confirmar, .pedi
     gap: 4px 40px;
   }
 }
+
+/* ---------- Panel del carrito ---------- */
+
+button.cabecera-carrito {
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.mini-carrito {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+  border: 1px solid var(--borde);
+  border-radius: 16px 16px 0 0;
+  background: var(--superficie);
+  box-shadow: 0 -8px 28px rgba(20, 26, 51, 0.2);
+  animation: subir-panel 0.22s ease-out;
+}
+
+.mini-carrito:focus {
+  outline: none;
+}
+
+@keyframes subir-panel {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.mini-carrito-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.mini-carrito-cabecera h2 {
+  flex-wrap: wrap;
+  margin: 0;
+  color: var(--azul-oscuro);
+  font-size: 1.15rem;
+}
+
+.mini-carrito-cuenta {
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.mini-carrito-vacio {
+  margin: 0;
+  padding: 28px 16px;
+  color: var(--texto-suave);
+  text-align: center;
+}
+
+.mini-carrito-lista {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0 16px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.mini-carrito-lista li {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--borde);
+  animation: aparecer 0.2s ease-out;
+}
+
+.mini-carrito-datos {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mini-carrito-datos .aviso-linea {
+  margin: 2px 0 0;
+}
+
+.mini-carrito-acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.mini-carrito-acciones .precio-linea {
+  margin-left: auto;
+  font-size: 1rem;
+}
+
+.mini-carrito .cantidad {
+  border-width: 1px;
+  border-color: var(--borde);
+}
+
+.mini-carrito .cantidad button {
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  color: var(--azul-oscuro);
+}
+
+.mini-carrito .cantidad button:disabled {
+  background: transparent;
+  color: var(--borde);
+}
+
+.mini-carrito .cantidad output {
+  min-width: 28px;
+}
+
+.mini-carrito-pie {
+  display: grid;
+  gap: 8px;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--borde);
+}
+
+.mini-carrito-pie .nota {
+  margin: 0;
+}
+
+.mini-carrito-pie .totales {
+  margin: 0;
+}
+
+/* En celular el panel es una hoja inferior: se ocultan los detalles para que deje ver el catálogo. */
+@media (max-width: 767px) {
+  .mini-carrito-pie .igv {
+    display: none;
+  }
+
+  .mini-carrito-lista {
+    max-height: 34vh;
+  }
+}
+
+/* En computadora es un panel a la derecha, bajo la cabecera. */
+@media (min-width: 768px) {
+  .mini-carrito {
+    top: 96px;
+    right: 16px;
+    bottom: 16px;
+    left: auto;
+    width: 400px;
+    height: fit-content;
+    max-height: calc(100vh - 112px);
+    border-radius: 16px;
+    box-shadow: 0 10px 32px rgba(20, 26, 51, 0.2);
+    animation-name: entrar-lateral;
+  }
+}
